@@ -130,3 +130,4 @@ E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsit
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\EcommerceFashionWebsite.pdb
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\EcommerceFashionWebsite.genruntimeconfig.cache
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\ref\EcommerceFashionWebsite.dll
+E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\EcommerceFashionWebsite.sourcelink.json

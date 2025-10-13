@@ -6,22 +6,37 @@ namespace EcommerceFashionWebsite.Entity
     [Table("orders")]
     public class Order
     {
-        [Key] [Column("id")] public string Id { get; set; } = string.Empty;
+        [Key] 
+        [Column("id")] 
+        public string Id { get; set; } = string.Empty;
 
-        [Column("address")] public string Address { get; set; } = string.Empty;
+        [Column("address")] 
+        public string Address { get; set; } = string.Empty;
 
-        [Column("numberPhone")] public string NumberPhone { get; set; } = string.Empty;
+        [Column("numberPhone")] 
+        public string NumberPhone { get; set; } = string.Empty;
 
-        [Column("status")] public int Status { get; set; }
+        [Column("status")] 
+        public int Status { get; set; }
 
-        [Column("dateBuy")] public DateTime? DateBuy { get; set; }
+        [Column("dateBuy")] 
+        public DateTime? DateBuy { get; set; }
 
-        [Column("dateArrival")] public DateTime? DateArrival { get; set; }
+        [Column("dateArrival")] 
+        public DateTime? DateArrival { get; set; }
 
-        [Column("idAccount")] public int IdAccount { get; set; }
+        [Column("idAccount")] 
+        public int IdAccount { get; set; }
 
-        [Column("is_verified")] public bool IsVerified { get; set; }
+        [Column("is_verified")] 
+        public bool IsVerified { get; set; }
 
+        // Navigation properties
+        [NotMapped]
+        public Account? Account { get; set; }
+        
+        [NotMapped]
+        public List<OrderDetail> OrderDetail { get; set; } = new();
 
         public Order()
         {

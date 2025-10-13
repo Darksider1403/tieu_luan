@@ -182,7 +182,7 @@ namespace EcommerceFashionWebsite.Services
             var message = $"http://localhost:3000/forgot-password?code={code}";
             var dateCreated = DateTime.Now;
             var dateExpired = dateCreated.AddDays(1);
-
+    
             var result = await _accountRepository.CreateVerifyEmailAsync(code, dateCreated, dateExpired, false, account.Id);
             if (result > 0)
             {

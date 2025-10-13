@@ -24,6 +24,7 @@ namespace EcommerceFashionWebsite.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<Slider> Sliders { get; set; }
         public DbSet<ProductRating> ProductRatings { get; set; }
+        public DbSet<OrderDetail> OrderDetail { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -52,6 +53,14 @@ namespace EcommerceFashionWebsite.Data
                 .WithOne()
                 .HasForeignKey(p => p.IdCategory)
                 .HasPrincipalKey(c => c.Id);
+            
+            modelBuilder.Entity<OrderDetail>()
+                .HasKey(od => new { od.IdOrder, od.IdProduct });
+        
+            modelBuilder.Entity<Order>()
+                .HasMany(o => o.OrderDetail)
+                .WithOne(od => od.Order)
+                .HasForeignKey(od => od.IdOrder);
         }
     }
 }

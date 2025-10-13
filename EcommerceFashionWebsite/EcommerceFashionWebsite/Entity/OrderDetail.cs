@@ -18,8 +18,12 @@ namespace EcommerceFashionWebsite.Entity
         [Column("price")]
         public int Price { get; set; }
         
+        // Navigation properties
         [NotMapped]
         public Product? Product { get; set; }
+        
+        [NotMapped]
+        public Order? Order { get; set; }
 
         public OrderDetail()
         {

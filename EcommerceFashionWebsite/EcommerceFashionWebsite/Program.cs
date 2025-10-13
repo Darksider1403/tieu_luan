@@ -61,7 +61,7 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.SameSite = SameSiteMode.Lax; // Add this for cross-origin cookies
+    options.Cookie.SameSite = SameSiteMode.Lax; 
 });
 
 // Add authentication
@@ -71,8 +71,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/api/account/login";
         options.LogoutPath = "/api/account/logout";
         options.ExpireTimeSpan = TimeSpan.FromHours(24);
-        options.Cookie.SameSite = SameSiteMode.Lax; // Add this for cross-origin cookies
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // Allow HTTP in dev
+        options.Cookie.SameSite = SameSiteMode.Lax; 
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; 
     });
 
 // Add repositories and services
@@ -82,6 +82,8 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IEncryptService, EncryptService>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 var app = builder.Build();
 

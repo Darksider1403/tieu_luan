@@ -55,7 +55,7 @@ namespace EcommerceFashionWebsite.Controller
             }
         }
 
-        [HttpGet("category/{idCategory}")]
+        [HttpGet("category/{categoryId}")]
         public async Task<ActionResult<List<ProductDto>>> GetProductsByCategory(int categoryId, [FromQuery] int limit = 15)
         {
             try
