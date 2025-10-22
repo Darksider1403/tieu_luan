@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EcommerceFashionWebsite.Entity
 {
-    [Table("order_items")]  // Change to match your actual table name
+  
     public class OrderItem
     {
         [Key]

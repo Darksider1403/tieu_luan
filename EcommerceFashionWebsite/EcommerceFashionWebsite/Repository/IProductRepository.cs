@@ -4,6 +4,7 @@ namespace EcommerceFashionWebsite.Repository
 {
     public interface IProductRepository
     {
+        // Existing methods
         Task<List<Product>> GetAllProductsAsync();
         Task<Product?> GetProductByIdAsync(string productId); 
         Task<List<Product>> GetProductsByCategoryAsync(int categoryId, int limit = 15);
@@ -30,5 +31,14 @@ namespace EcommerceFashionWebsite.Repository
         
         // Slider methods
         Task<List<Slider>> GetAllSlidersAsync();
+
+        // New comment and rating methods
+        Task<List<ProductComment>> GetProductCommentsAsync(string productId);
+        Task<int> AddProductCommentAsync(ProductComment comment);
+        Task<int> UpdateProductCommentAsync(ProductComment comment);
+        Task<bool> DeleteProductCommentAsync(int commentId);
+        Task<double> GetProductAverageRatingAsync(string productId);
+        Task<int> GetOrCreateProductRatingAsync(string productId, int accountId, int rating);
+        Task<bool> HasUserCommentedAsync(string productId, int accountId);
     }
 }

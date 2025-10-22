@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EcommerceFashionWebsite.Entity
 {
-    [Table("order_details")]
-    public class OrderDetail
+    [Table("carts")]
+    public class Cart
     {
         [Column("idOrder")]
         public string IdOrder { get; set; } = string.Empty;
@@ -18,18 +18,17 @@ namespace EcommerceFashionWebsite.Entity
         [Column("price")]
         public int Price { get; set; }
         
-        // Navigation properties
-        [NotMapped]
+        [ForeignKey("IdProduct")]
         public Product? Product { get; set; }
         
-        [NotMapped]
+        [ForeignKey("IdOrder")]
         public Order? Order { get; set; }
 
-        public OrderDetail()
+        public Cart()
         {
         }
 
-        public OrderDetail(string idOrder, string idProduct, int quantity, int price)
+        public Cart(string idOrder, string idProduct, int quantity, int price)
         {
             IdOrder = idOrder;
             IdProduct = idProduct;

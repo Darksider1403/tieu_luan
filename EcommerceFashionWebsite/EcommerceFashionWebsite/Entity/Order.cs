@@ -26,24 +26,23 @@ namespace EcommerceFashionWebsite.Entity
         public DateTime? DateArrival { get; set; }
 
         [Column("idAccount")] 
-        public int IdAccount { get; set; }
+        public int? IdAccount { get; set; }
 
         [Column("is_verified")] 
         public bool IsVerified { get; set; }
 
-        // Navigation properties
-        [NotMapped]
-        public Account? Account { get; set; }
+        // Navigation properties - REMOVED [NotMapped]
+        [ForeignKey("IdAccount")]
+        public virtual Account? Account { get; set; }
         
-        [NotMapped]
-        public List<OrderDetail> OrderDetail { get; set; } = new();
+        public virtual ICollection<Cart> OrderDetail { get; set; } = new List<Cart>();
 
         public Order()
         {
         }
 
         public Order(string id, string address, string numberPhone, int status, DateTime? dateBuy,
-            DateTime? dateArrival, int idAccount, bool isVerified)
+            DateTime? dateArrival, int? idAccount, bool isVerified)
         {
             Id = id;
             Address = address;

@@ -24,7 +24,9 @@ namespace EcommerceFashionWebsite.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<Slider> Sliders { get; set; }
         public DbSet<ProductRating> ProductRatings { get; set; }
-        public DbSet<OrderDetail> OrderDetail { get; set; }
+        public DbSet<Cart> Carts { get; set; }
+        public DbSet<ProductComment> ProductComments { get; set; }
+        
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -48,13 +50,45 @@ namespace EcommerceFashionWebsite.Data
                 entity.Property(e => e.IdCategory).HasColumnName("idCategory").HasMaxLength(50);
             });
             
+            modelBuilder.Entity<ProductComment>(entity =>
+            {   
+                entity.HasKey(e => e.Id);
+                entity.ToTable("product_comments");
+        
+                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+                entity.Property(e => e.ProductId).HasColumnName("productId").IsRequired();
+                entity.Property(e => e.AccountId).HasColumnName("accountId").IsRequired();
+                entity.Property(e => e.Content).HasColumnName("content").IsRequired();
+                entity.Property(e => e.Rating).HasColumnName("rating");
+                entity.Property(e => e.DateComment).HasColumnName("dateComment");
+                entity.Property(e => e.Status).HasColumnName("status");
+            });
+            
+            modelBuilder.Entity<Cart>()
+                .HasOne(c => c.Order)
+                .WithMany(o => o.OrderDetail)
+                .HasForeignKey(c => c.IdOrder)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Cart>()
+                .HasOne(c => c.Product)
+                .WithMany(p => p.Carts)
+                .HasForeignKey(c => c.IdProduct)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Order>()
+                .HasOne(o => o.Account)
+                .WithMany()
+                .HasForeignKey(o => o.IdAccount)
+                .OnDelete(DeleteBehavior.SetNull);
+            
             modelBuilder.Entity<Category>()
                 .HasMany<Product>()
                 .WithOne()
                 .HasForeignKey(p => p.IdCategory)
                 .HasPrincipalKey(c => c.Id);
             
-            modelBuilder.Entity<OrderDetail>()
+            modelBuilder.Entity<Cart>()
                 .HasKey(od => new { od.IdOrder, od.IdProduct });
         
             modelBuilder.Entity<Order>()

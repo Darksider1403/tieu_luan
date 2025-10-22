@@ -25,7 +25,7 @@ public class ProductRepository : IProductRepository
     {
         return await _context.Products
             .Where(p => p.Id == productId)
-            .Select(p => new Product 
+            .Select(p => new Product
             {
                 Id = p.Id,
                 Name = p.Name,
@@ -70,7 +70,7 @@ public class ProductRepository : IProductRepository
 
         if (categoryId.HasValue)
         {
-            query = query.Where(p => p.IdCategory == categoryId.Value); 
+            query = query.Where(p => p.IdCategory == categoryId.Value);
         }
 
         return await query
@@ -98,7 +98,7 @@ public class ProductRepository : IProductRepository
 
     public async Task<int> CreateProductAsync(Product product)
     {
-        _context.Products.Add(product); 
+        _context.Products.Add(product);
         return await _context.SaveChangesAsync();
     }
 
@@ -135,7 +135,7 @@ public class ProductRepository : IProductRepository
         return 0;
     }
 
-    public async Task<int> DecrementQuantityAsync(List<string> productIds, int decrementAmount) 
+    public async Task<int> DecrementQuantityAsync(List<string> productIds, int decrementAmount)
     {
         if (decrementAmount <= 0)
             throw new ArgumentException("Decrement amount must be greater than 0");
@@ -143,7 +143,7 @@ public class ProductRepository : IProductRepository
         int totalUpdated = 0;
         foreach (var productId in productIds)
         {
-            var product = await _context.Products.FindAsync(productId); 
+            var product = await _context.Products.FindAsync(productId);
             if (product != null && product.Quantity >= decrementAmount)
             {
                 product.Quantity -= decrementAmount;
@@ -183,7 +183,7 @@ public class ProductRepository : IProductRepository
         var result = new Dictionary<string, string>();
         foreach (var img in images)
         {
-            if (!result.ContainsKey(img.ProductId.ToString())) 
+            if (!result.ContainsKey(img.ProductId.ToString()))
             {
                 result[img.ProductId.ToString()] = img.Source;
             }
@@ -241,5 +241,86 @@ public class ProductRepository : IProductRepository
     public async Task<List<Slider>> GetAllSlidersAsync()
     {
         return await _context.Sliders.ToListAsync();
+    }
+
+    public async Task<List<ProductComment>> GetProductCommentsAsync(string productId)
+    {
+        return await _context.ProductComments
+            .Include(pc => pc.Account)
+            .Where(pc => pc.ProductId == productId && pc.Status == 1)
+            .OrderByDescending(pc => pc.DateComment)
+            .ToListAsync();
+    }
+
+    public async Task<int> AddProductCommentAsync(ProductComment comment)
+    {
+        comment.DateComment = DateTime.Now;
+        comment.Status = 1; // Auto-approve
+
+        _context.ProductComments.Add(comment);
+        return await _context.SaveChangesAsync();
+    }
+
+    public async Task<int> UpdateProductCommentAsync(ProductComment comment)
+    {
+        _context.ProductComments.Update(comment);
+        return await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool> DeleteProductCommentAsync(int commentId)
+    {
+        var comment = await _context.ProductComments.FindAsync(commentId);
+        if (comment != null)
+        {
+            _context.ProductComments.Remove(comment);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        return false;
+    }
+
+    public async Task<double> GetProductAverageRatingAsync(string productId)
+    {
+        var average = await _context.ProductComments
+            .Where(pc => pc.ProductId == productId && pc.Status == 1 && pc.Rating > 0)
+            .AverageAsync(pc => (double?)pc.Rating);
+
+        return average ?? 0.0;
+    }
+
+    public async Task<int> GetOrCreateProductRatingAsync(string productId, int accountId, int rating)
+    {
+        var existingComment = await _context.ProductComments
+            .FirstOrDefaultAsync(pc => pc.ProductId == productId && pc.AccountId == accountId);
+
+        if (existingComment != null)
+        {
+            existingComment.Rating = rating;
+            existingComment.DateComment = DateTime.Now;
+            _context.ProductComments.Update(existingComment);
+        }
+        else
+        {
+            var newComment = new ProductComment
+            {
+                ProductId = productId,
+                AccountId = accountId,
+                Rating = rating,
+                Content = string.Empty,
+                DateComment = DateTime.Now,
+                Status = 1
+            };
+
+            _context.ProductComments.Add(newComment);
+        }
+
+        return await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool> HasUserCommentedAsync(string productId, int accountId)
+    {
+        return await _context.ProductComments
+            .AnyAsync(pc => pc.ProductId == productId && pc.AccountId == accountId);
     }
 }

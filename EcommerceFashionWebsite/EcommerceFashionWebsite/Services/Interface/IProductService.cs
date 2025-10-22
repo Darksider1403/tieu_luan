@@ -21,5 +21,9 @@ namespace EcommerceFashionWebsite.Services.Interface
         Task<List<SliderDto>> GetAllSlidersAsync();
         Task<int> GetTotalProductsAsync();
         Task<int> GetTotalProductsByCategoryAsync(int categoryId);
+        Task<Dictionary<string, string>> GetProductImagesAsync(string productId);
+        Task<List<ProductCommentDto>> GetProductCommentsAsync(string productId);
+        Task<bool> AddProductRatingAsync(string productId, int accountId, int rating);
+        Task<bool> AddProductCommentAsync(string productId, int accountId, string content);
     }
 }

@@ -8,57 +8,137 @@ namespace EcommerceFashionWebsite.Services
     public class ProductService : IProductService
     {
         private readonly IProductRepository _productRepository;
+        private readonly IAccountRepository _accountRepository;
+        private readonly ILogger<ProductService> _logger;
 
-        public ProductService(IProductRepository productRepository)
+        public ProductService(IProductRepository productRepository,
+            IAccountRepository accountRepository,
+            ILogger<ProductService> logger)
         {
             _productRepository = productRepository;
+            _accountRepository = accountRepository;
+            _logger = logger;
         }
 
         public async Task<List<ProductDto>> GetAllProductsAsync()
         {
             var products = await _productRepository.GetAllProductsAsync();
-            return products.Select(MapToDto).ToList();
+            var thumbnails = await _productRepository.GetThumbnailImagesAsync();
+
+            var productDtos = new List<ProductDto>();
+            foreach (var product in products)
+            {
+                var dto = await MapToDtoAsync(product);
+                if (thumbnails.TryGetValue(product.Id, out var thumbnail))
+                {
+                    dto.ThumbnailImage = thumbnail;
+                }
+
+                productDtos.Add(dto);
+            }
+
+            return productDtos;
         }
 
         public async Task<ProductDto?> GetProductByIdAsync(string productId)
         {
             var product = await _productRepository.GetProductByIdAsync(productId);
-            return product != null ? MapToDto(product) : null;
+            if (product == null) return null;
+
+            return await MapToDtoAsync(product);
         }
 
         public async Task<List<ProductDto>> GetProductsByCategoryAsync(int categoryId, int limit = 15)
         {
             var products = await _productRepository.GetProductsByCategoryAsync(categoryId, limit);
-            return products.Select(MapToDto).ToList();
+            var thumbnails = await _productRepository.GetThumbnailImagesAsync();
+
+            var productDtos = new List<ProductDto>();
+            foreach (var product in products)
+            {
+                var dto = await MapToDtoAsync(product);
+                if (thumbnails.TryGetValue(product.Id, out var thumbnail))
+                {
+                    dto.ThumbnailImage = thumbnail;
+                }
+
+                productDtos.Add(dto);
+            }
+
+            return productDtos;
         }
 
         public async Task<List<ProductDto>> GetProductsByGenderAsync(string gender, int limit = 15)
         {
             var products = await _productRepository.GetProductsByGenderAsync(gender, limit);
-            return products.Select(MapToDto).ToList();
+            var thumbnails = await _productRepository.GetThumbnailImagesAsync();
+
+            var productDtos = new List<ProductDto>();
+            foreach (var product in products)
+            {
+                var dto = await MapToDtoAsync(product);
+                if (thumbnails.TryGetValue(product.Id, out var thumbnail))
+                {
+                    dto.ThumbnailImage = thumbnail;
+                }
+
+                productDtos.Add(dto);
+            }
+
+            return productDtos;
         }
 
         public async Task<List<ProductDto>> SearchProductsAsync(string searchTerm)
         {
             var products = await _productRepository.SearchProductsAsync(searchTerm);
-            return products.Select(MapToDto).ToList();
+            var thumbnails = await _productRepository.GetThumbnailImagesAsync();
+
+            var productDtos = new List<ProductDto>();
+            foreach (var product in products)
+            {
+                var dto = await MapToDtoAsync(product);
+                if (thumbnails.TryGetValue(product.Id, out var thumbnail))
+                {
+                    dto.ThumbnailImage = thumbnail;
+                }
+
+                productDtos.Add(dto);
+            }
+
+            return productDtos;
         }
 
-        public async Task<PagedResult<ProductDto>> GetProductsWithPaginationAsync(int page, int pageSize, int? categoryId, string? sortBy = null, string? filter = null)
+        public async Task<PagedResult<ProductDto>> GetProductsWithPaginationAsync(int page, int pageSize,
+            int? categoryId, string? sortBy = null, string? filter = null)
         {
             var offset = page * pageSize;
-            var products = await _productRepository.GetProductsWithPaginationAsync(pageSize, offset, categoryId); // Convert int? to string
-    
-            // Fix the logic - it was backwards
+            var products = await _productRepository.GetProductsWithPaginationAsync(pageSize, offset, categoryId);
+
+            // Get all thumbnails in one call for efficiency
+            var thumbnails = await _productRepository.GetThumbnailImagesAsync();
+
+            // Convert to DTOs and populate thumbnails and ratings
+            var productDtos = new List<ProductDto>();
+            foreach (var product in products)
+            {
+                var dto = await MapToDtoAsync(product);
+                if (thumbnails.TryGetValue(product.Id, out var thumbnail))
+                {
+                    dto.ThumbnailImage = thumbnail;
+                }
+
+                productDtos.Add(dto);
+            }
+
             var totalProducts = categoryId != null
-                ? await _productRepository.GetTotalProductsByCategoryAsync(categoryId.Value) 
-                : await _productRepository.GetTotalProductsAsync(); 
+                ? await _productRepository.GetTotalProductsByCategoryAsync(categoryId.Value)
+                : await _productRepository.GetTotalProductsAsync();
 
             var totalPages = (int)Math.Ceiling((double)totalProducts / pageSize);
 
             return new PagedResult<ProductDto>
             {
-                Items = products.Select(MapToDto).ToList(),
+                Items = productDtos,
                 CurrentPage = page,
                 PageSize = pageSize,
                 TotalPages = totalPages,
@@ -85,7 +165,7 @@ namespace EcommerceFashionWebsite.Services
             var result = await _productRepository.CreateProductAsync(product);
             if (result > 0)
             {
-                return MapToDto(product);
+                return await MapToDtoAsync(product);
             }
 
             throw new Exception("Failed to create product");
@@ -107,7 +187,7 @@ namespace EcommerceFashionWebsite.Services
             product.IdCategory = dto.IdCategory;
 
             await _productRepository.UpdateProductAsync(product);
-            return MapToDto(product);
+            return await MapToDtoAsync(product);
         }
 
         public async Task<bool> UpdateProductStatusAsync(string productId, int status)
@@ -116,19 +196,19 @@ namespace EcommerceFashionWebsite.Services
             return result > 0;
         }
 
-        public async Task<bool> DeleteProductAsync(string productId) 
+        public async Task<bool> DeleteProductAsync(string productId)
         {
             var result = await _productRepository.DeleteProductAsync(productId);
             return result > 0;
         }
 
-        public async Task<bool> DecrementQuantityAsync(List<string> productIds, int decrementAmount) 
+        public async Task<bool> DecrementQuantityAsync(List<string> productIds, int decrementAmount)
         {
             var result = await _productRepository.DecrementQuantityAsync(productIds, decrementAmount);
             return result > 0;
         }
 
-        public async Task<double> GetProductRatingAsync(string productId) 
+        public async Task<double> GetProductRatingAsync(string productId)
         {
             return await _productRepository.GetProductRatingAsync(productId);
         }
@@ -158,6 +238,101 @@ namespace EcommerceFashionWebsite.Services
             return await _productRepository.GetTotalProductsByCategoryAsync(categoryId);
         }
 
+        public async Task<Dictionary<string, string>> GetProductImagesAsync(string productId)
+        {
+            return await _productRepository.GetProductImagesAsync(productId);
+        }
+
+        public async Task<List<ProductCommentDto>> GetProductCommentsAsync(string productId)
+        {
+            try
+            {
+                var comments = await _productRepository.GetProductCommentsAsync(productId);
+        
+                var commentDtos = comments.Select(c => new ProductCommentDto
+                {
+                    Username = c.Account?.Username ?? "Anonymous",
+                    Content = c.Content,
+                    Rating = c.Rating,
+                    DateComment = c.DateComment,
+                    Avatar = string.Empty
+                }).ToList();
+
+                return commentDtos;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting product comments for {ProductId}", productId);
+                return new List<ProductCommentDto>();
+            }
+        }
+
+        public async Task<bool> AddProductRatingAsync(string productId, int accountId, int rating)
+        {
+            try
+            {
+                if (rating < 1 || rating > 5)
+                    return false;
+
+                var result = await _productRepository.GetOrCreateProductRatingAsync(productId, accountId, rating);
+                return result > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding product rating");
+                return false;
+            }
+        }
+
+        public async Task<bool> AddProductCommentAsync(string productId, int accountId, string content)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(content))
+                    return false;
+
+                var comment = new ProductComment
+                {
+                    ProductId = productId,
+                    AccountId = accountId,
+                    Content = content.Trim(),
+                    Rating = 0
+                };
+
+                var result = await _productRepository.AddProductCommentAsync(comment);
+                return result > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding product comment");
+                return false;
+            }
+        }
+
+        // Updated mapping method that populates thumbnail and rating
+        private async Task<ProductDto> MapToDtoAsync(Product product)
+        {
+            var thumbnailImage = await _productRepository.GetProductThumbnailAsync(product.Id);
+            var rating = await _productRepository.GetProductRatingAsync(product.Id);
+
+            return new ProductDto
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Price = product.Price,
+                Quantity = product.Quantity,
+                Material = product.Material,
+                Size = product.Size,
+                Color = product.Color,
+                Gender = product.Gender,
+                IdCategory = product.IdCategory,
+                Status = product.Status,
+                ThumbnailImage = thumbnailImage,
+                Rating = rating
+            };
+        }
+
+        // Keep the synchronous version for backwards compatibility if needed
         private static ProductDto MapToDto(Product product)
         {
             return new ProductDto
@@ -171,7 +346,9 @@ namespace EcommerceFashionWebsite.Services
                 Color = product.Color,
                 Gender = product.Gender,
                 IdCategory = product.IdCategory,
-                Status = product.Status
+                Status = product.Status,
+                ThumbnailImage = string.Empty,
+                Rating = 0.0 
             };
         }
     }

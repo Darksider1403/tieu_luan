@@ -109,7 +109,7 @@ namespace EcommerceFashionWebsite.Services
                 var product = await _productRepository.GetProductByIdAsync(item.ProductId);
                 if (product == null) continue;
 
-                var orderDetail = new OrderDetail
+                var orderDetail = new Cart
                 {
                     IdOrder = orderId,
                     IdProduct = item.ProductId,

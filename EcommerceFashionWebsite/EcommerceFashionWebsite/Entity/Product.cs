@@ -36,6 +36,8 @@ namespace EcommerceFashionWebsite.Entity
 
         [Column("idCategory")]  
         public int IdCategory { get; set; }
+        
+        public virtual ICollection<Cart> Carts { get; set; } = new List<Cart>();
 
         public Product()
         {
