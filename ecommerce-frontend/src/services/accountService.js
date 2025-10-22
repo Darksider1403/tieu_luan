@@ -7,6 +7,13 @@ export const accountService = {
         username: credentials.username,
         password: credentials.password,
       });
+
+      // Save token and user data to localStorage
+      if (response.data.success && response.data.token) {
+        localStorage.setItem("authToken", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+      }
+
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.error || "Login failed");
@@ -15,9 +22,18 @@ export const accountService = {
 
   logout: async () => {
     try {
-      const response = await apiClient.post("/account/logout");
-      return response.data;
+      // Clear local storage
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+
+      // Optional: call logout endpoint if you have one
+      await apiClient.post("/account/logout");
+
+      return { success: true };
     } catch (error) {
+      // Still clear local storage even if API call fails
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
       throw new Error(error.response?.data?.error || "Logout failed");
     }
   },
@@ -37,13 +53,26 @@ export const accountService = {
     }
   },
 
-  getAccount: async (id) => {
+  getCurrentUser: async () => {
     try {
-      const response = await apiClient.get(`/account/${id}`);
+      const response = await apiClient.get("/account/me");
       return response.data;
     } catch (error) {
-      throw new Error(error.response?.data?.error || "Failed to get account");
+      throw new Error(error.response?.data?.error || "Failed to get user");
     }
+  },
+
+  isAuthenticated: () => {
+    return !!localStorage.getItem("authToken");
+  },
+
+  getUser: () => {
+    const userStr = localStorage.getItem("user");
+    return userStr ? JSON.parse(userStr) : null;
+  },
+
+  getToken: () => {
+    return localStorage.getItem("authToken");
   },
 
   verifyEmail: async (code) => {
@@ -72,7 +101,6 @@ export const accountService = {
     }
   },
 
-  // Add forgot password methods here
   sendResetEmail: async (username, email) => {
     try {
       const response = await apiClient.post("/account/forgot-password", {

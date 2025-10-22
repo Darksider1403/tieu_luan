@@ -15,107 +15,96 @@ namespace EcommerceFashionWebsite.Controller
         private readonly IAccountService _accountService;
         private readonly IEncryptService _encryptService;
         private readonly IEmailService _emailService;
+        private readonly IJwtService _jwtService; 
         private readonly ILogger<AccountController> _logger;
 
         public AccountController(IEmailService emailService,
             IAccountService accountService,
             IEncryptService encryptService,
+            IJwtService jwtService,
             ILogger<AccountController> logger)
         {
             _emailService = emailService;
             _accountService = accountService;
             _encryptService = encryptService;
+            _jwtService = jwtService;
             _logger = logger;
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginDto loginDto)
+public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginDto loginDto)
+{
+    try
+    {
+        if (string.IsNullOrEmpty(loginDto.Username) || string.IsNullOrEmpty(loginDto.Password))
         {
-            try
+            _logger.LogWarning("Login attempt with missing credentials from IP: {IP}", GetClientIpAddress());
+            return BadRequest(new { error = "Username and password are required" });
+        }
+
+        var hashedPassword = _encryptService.EncryptMd5(loginDto.Password);
+        var account = await _accountService.CheckLoginAsync(loginDto.Username, hashedPassword);
+
+        if (account != null)
+        {
+            if (await _accountService.IsLoginSuccessAsync(account))
             {
-                if (string.IsNullOrEmpty(loginDto.Username) || string.IsNullOrEmpty(loginDto.Password))
+                // Check for required fields
+                if (string.IsNullOrEmpty(account.Email) || string.IsNullOrEmpty(account.Username))
                 {
-                    _logger.LogWarning("Login attempt with missing credentials from IP: {IP}", GetClientIpAddress());
-                    return BadRequest(new { error = "Username and password are required" });
+                    _logger.LogWarning("Account missing required fields - Username: {Username}, Email: {Email}",
+                        account.Username ?? "NULL", account.Email ?? "NULL");
+                    return BadRequest(new { error = "Account data is incomplete" });
                 }
 
-                var hashedPassword = _encryptService.EncryptMd5(loginDto.Password);
-                var account = await _accountService.CheckLoginAsync(loginDto.Username, hashedPassword);
+                // Get user role
+                var role = await _accountService.GetRoleByAccountIdAsync(account.Id);
+                var roleString = role == 1 ? "Admin" : "User";
 
-                if (account != null)
+                // Generate JWT token
+                var token = _jwtService.GenerateToken(account.Id, account.Username, roleString);
+
+                _logger.LogInformation("Successful login for user: {Username} from IP: {IP}",
+                    account.Username, GetClientIpAddress());
+
+                return Ok(new LoginResponseDto
                 {
-                    if (await _accountService.IsLoginSuccessAsync(account))
+                    Success = true,
+                    Message = "Login successful",
+                    Token = token, // Add this field
+                    User = new AccountDto
                     {
-                        // Check for required fields
-                        if (string.IsNullOrEmpty(account.Email) || string.IsNullOrEmpty(account.Username))
-                        {
-                            _logger.LogWarning("Account missing required fields - Username: {Username}, Email: {Email}",
-                                account.Username ?? "NULL", account.Email ?? "NULL");
-                            return BadRequest(new { error = "Account data is incomplete" });
-                        }
-
-                        // Create claims for the user
-                        var claims = new List<Claim>
-                        {
-                            new Claim(ClaimTypes.Name, account.Username),
-                            new Claim("UserId", account.Id.ToString()),
-                            new Claim(ClaimTypes.Email, account.Email)
-                        };
-
-                        var role = await _accountService.GetRoleByAccountIdAsync(account.Id);
-                        claims.Add(new Claim(ClaimTypes.Role, role == 1 ? "User" : "Admin"));
-
-                        var claimsIdentity =
-                            new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-                        var authProperties = new AuthenticationProperties
-                        {
-                            IsPersistent = true,
-                            ExpiresUtc = DateTimeOffset.UtcNow.AddHours(24)
-                        };
-
-                        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
-                            new ClaimsPrincipal(claimsIdentity), authProperties);
-
-                        _logger.LogInformation("Successful login for user: {Username} from IP: {IP}",
-                            account.Username, GetClientIpAddress());
-
-                        return Ok(new LoginResponseDto
-                        {
-                            Success = true,
-                            Message = "Login successful",
-                            User = new AccountDto
-                            {
-                                Id = account.Id,
-                                Username = account.Username,
-                                Email = account.Email,
-                                Fullname = account.Fullname,
-                                NumberPhone = account.NumberPhone,
-                                Status = account.Status
-                            },
-                            RedirectUrl = role == 1 ? "/home" : "/admin"
-                        });
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "Login attempt failed - account not confirmed or locked: {Username} from IP: {IP}",
-                            loginDto.Username, GetClientIpAddress());
-                        return BadRequest(new { error = "Tài khoản chưa được xác nhận hoặc đã bị khóa" });
-                    }
-                }
-                else
-                {
-                    _logger.LogWarning("Login attempt failed - wrong credentials: {Username} from IP: {IP}",
-                        loginDto.Username, GetClientIpAddress());
-                    return BadRequest(new { error = "Bạn nhập sai email hoặc mật khẩu" });
-                }
+                        Id = account.Id,
+                        Username = account.Username,
+                        Email = account.Email,
+                        Fullname = account.Fullname,
+                        NumberPhone = account.NumberPhone,
+                        Status = account.Status
+                    },
+                    RedirectUrl = role == 1 ? "/admin" : "/home"
+                });
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError(ex, "Error during login attempt for user: {Username}", loginDto.Username);
-                return StatusCode(500, new { error = "An error occurred during login" });
+                _logger.LogWarning(
+                    "Login attempt failed - account not confirmed or locked: {Username} from IP: {IP}",
+                    loginDto.Username, GetClientIpAddress());
+                return BadRequest(new { error = "Tài khoản chưa được xác nhận hoặc đã bị khóa" });
             }
         }
+        else
+        {
+            _logger.LogWarning("Login attempt failed - wrong credentials: {Username} from IP: {IP}",
+                loginDto.Username, GetClientIpAddress());
+            return BadRequest(new { error = "Bạn nhập sai email hoặc mật khẩu" });
+        }
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error during login attempt for user: {Username}", loginDto.Username);
+        return StatusCode(500, new { error = "An error occurred during login" });
+    }
+}
 
         [HttpPost("logout")]
         public async Task<ActionResult> Logout()

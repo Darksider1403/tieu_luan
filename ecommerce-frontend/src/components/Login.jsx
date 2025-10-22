@@ -1,16 +1,19 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { accountService } from "../services/accountService";
 import { ShoppingBag, Star, Truck, Shield, EyeOff, Eye } from "lucide-react";
+import Toast from "./Toast";
 
 function Login() {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [notify, setNotify] = useState("");
+  const [toast, setToast] = useState(null);
 
   const handleChange = (e) => {
     setFormData({
@@ -22,20 +25,25 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setNotify("");
 
     try {
       const response = await accountService.login(formData);
 
       if (response.success) {
-        setNotify(response.message);
+        setToast({
+          message: response.message || "Đăng nhập thành công!",
+          type: "success",
+        });
+
         setTimeout(() => {
-          window.location.href = response.redirectUrl;
+          navigate(response.redirectUrl || "/");
         }, 1000);
       }
     } catch (err) {
-      setError(err.message);
+      setToast({
+        message: err.message || "Đăng nhập thất bại",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -48,6 +56,14 @@ function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-pink-50">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-7xl mx-auto">
           <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl overflow-hidden border border-white/20">
@@ -57,7 +73,6 @@ function Login() {
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-pink-600 to-indigo-700"></div>
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="relative z-10 p-12 text-white flex flex-col justify-center h-full">
-                  {/* Logo/Brand */}
                   <div className="mb-8">
                     <div className="flex items-center space-x-3 mb-4">
                       <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
@@ -70,7 +85,6 @@ function Login() {
                     </p>
                   </div>
 
-                  {/* Benefits */}
                   <div className="space-y-6">
                     <div className="flex items-start space-x-4">
                       <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center flex-shrink-0">
@@ -116,7 +130,6 @@ function Login() {
                     </div>
                   </div>
 
-                  {/* Decorative Elements */}
                   <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full"></div>
                   <div className="absolute -top-10 -left-10 w-32 h-32 bg-white/10 rounded-full"></div>
                 </div>
@@ -124,11 +137,11 @@ function Login() {
 
               {/* Right Section - Login Form */}
               <div className="lg:w-1/2 p-12 flex flex-col justify-center">
-                {/* Tab Navigation */}
                 <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl mb-8">
                   <button className="flex-1 py-3 px-4 text-sm font-medium rounded-lg bg-white text-gray-900 shadow-sm">
                     Sign In
                   </button>
+
                   <a
                     href="/register"
                     className="flex-1 py-3 px-4 text-sm font-medium rounded-lg text-gray-500 hover:text-gray-700 text-center"
@@ -137,7 +150,6 @@ function Login() {
                   </a>
                 </div>
 
-                {/* Welcome Text */}
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">
                     Welcome back!
@@ -147,19 +159,6 @@ function Login() {
                   </p>
                 </div>
 
-                {/* Notifications */}
-                {notify && (
-                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
-                    <p className="text-green-800 text-sm">{notify}</p>
-                  </div>
-                )}
-                {error && (
-                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-                    <p className="text-red-800 text-sm">{error}</p>
-                  </div>
-                )}
-
-                {/* Login Form */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -214,6 +213,7 @@ function Login() {
                         Remember me
                       </span>
                     </label>
+
                     <a
                       href="/forgot-password"
                       className="text-sm text-purple-600 hover:text-purple-500 font-medium"
@@ -238,7 +238,6 @@ function Login() {
                   </button>
                 </form>
 
-                {/* Divider */}
                 <div className="my-8 flex items-center">
                   <div className="flex-1 border-t border-gray-200"></div>
                   <span className="px-4 text-sm text-gray-500 bg-white">
@@ -247,7 +246,6 @@ function Login() {
                   <div className="flex-1 border-t border-gray-200"></div>
                 </div>
 
-                {/* Google Login */}
                 <button
                   onClick={handleGoogleLogin}
                   className="w-full bg-white border border-gray-200 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition duration-200 flex items-center justify-center space-x-3"
@@ -273,7 +271,6 @@ function Login() {
                   <span>Continue with Google</span>
                 </button>
 
-                {/* Footer Text */}
                 <p className="text-xs text-gray-500 text-center mt-8 leading-relaxed">
                   By continuing, you agree to our Terms of Service and Privacy
                   Policy. We protect your data and never share without consent.

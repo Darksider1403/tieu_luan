@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, ShoppingCart, User, Menu, X } from "lucide-react";
+import { Search, ShoppingCart, Menu, X } from "lucide-react";
 import apiClient from "../services/apiService";
+import UserMenu from "./UserMenu"; // Add this import
 
 const Header = ({ user, cartSize, onCartSizeUpdate }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -167,13 +168,8 @@ const Header = ({ user, cartSize, onCartSizeUpdate }) => {
               )}
             </a>
 
-            {/* User Account */}
-            <a
-              href={user ? "/profile" : "/login"}
-              className="p-2 text-gray-700 hover:text-purple-600 transition-colors"
-            >
-              <User className="w-6 h-6" />
-            </a>
+            {/* User Menu - REPLACED */}
+            <UserMenu />
 
             {/* Mobile menu button */}
             <button

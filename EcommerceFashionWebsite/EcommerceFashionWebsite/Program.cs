@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using EcommerceFashionWebsite.Data;
@@ -5,6 +6,8 @@ using EcommerceFashionWebsite.Repository;
 using EcommerceFashionWebsite.Services;
 using EcommerceFashionWebsite.Services.Interface;
 using EcommerceFashionWebsite.Configuration;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,17 +68,24 @@ builder.Services.AddSession(options =>
 });
 
 // Add authentication
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        options.LoginPath = "/api/account/login";
-        options.LogoutPath = "/api/account/logout";
-        options.ExpireTimeSpan = TimeSpan.FromHours(24);
-        options.Cookie.SameSite = SameSiteMode.Lax; 
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; 
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
     });
 
 // Add repositories and services
+builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
