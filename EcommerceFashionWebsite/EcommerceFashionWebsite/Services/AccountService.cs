@@ -203,5 +203,10 @@ namespace EcommerceFashionWebsite.Services
             var result = await _accountRepository.UpdateAccountPasswordAsync(accountId, hashedPassword);
             return result > 0;
         }
+        
+        public async Task<int> CreateRoleAccountAsync(Account account, int role)
+        {
+            return await _accountRepository.CreateRoleAccountAsync(account, role);
+        }
     }
 }

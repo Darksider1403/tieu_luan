@@ -17,5 +17,15 @@ public class AccessLevel
     public int IdAccount { get; set; }
     
     [ForeignKey("IdAccount")]
-    public virtual Account Account { get; set; } = null!;
+    public virtual Account? Account { get; set; } = null!;
+    
+    public AccessLevel(int role, int idAccount)
+    {
+        Role = role;
+        IdAccount = idAccount;
+    }
+
+    public AccessLevel()
+    {
+    }
 }

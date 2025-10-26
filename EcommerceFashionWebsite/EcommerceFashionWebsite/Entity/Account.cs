@@ -10,7 +10,7 @@ namespace EcommerceFashionWebsite.Entity
         [Column("id")]
         public int Id { get; set; }
 
-        [Column("username")]
+        [Column("userName")]
         [StringLength(255)]
         public string? Username { get; set; }
 

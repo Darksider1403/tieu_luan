@@ -8,10 +8,12 @@ namespace EcommerceFashionWebsite.Repository
     public class AccountRepository : IAccountRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<AccountRepository> _logger;
 
-        public AccountRepository(ApplicationDbContext context)
+        public AccountRepository(ApplicationDbContext context,  ILogger<AccountRepository> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<Account?> GetAccountByUsernameAsync(string username)
@@ -34,10 +36,23 @@ namespace EcommerceFashionWebsite.Repository
 
         public async Task<int> GetRoleByAccountIdAsync(int accountId)
         {
-            // Assuming you have an AccessLevel entity/table
-            var accessLevel = await _context.AccessLevels
-                .FirstOrDefaultAsync(al => al.IdAccount == accountId);
-            return accessLevel?.Role ?? 1; // Default to role 1 if not found
+            try
+            {
+                var accessLevel = await _context.Set<AccessLevel>()
+                    .Where(al => al.IdAccount == accountId)
+                    .FirstOrDefaultAsync();
+        
+                var roleValue = accessLevel?.Role ?? 0;
+                _logger.LogInformation("GetRoleByAccountIdAsync - Account {AccountId} has role: {Role}", 
+                    accountId, roleValue);
+        
+                return roleValue;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting role for account {AccountId}", accountId);
+                return 0; // Default to User role
+            }
         }
 
         public async Task<int> CreateAccountAsync(string username, string password, string email, string fullname,
@@ -139,10 +154,10 @@ namespace EcommerceFashionWebsite.Repository
         {
             var accessLevel = new AccessLevel
             {
-                Role = role,
+                Role = role, // 0 = User, 1 = Admin
                 IdAccount = account.Id
             };
-
+    
             _context.AccessLevels.Add(accessLevel);
             return await _context.SaveChangesAsync();
         }

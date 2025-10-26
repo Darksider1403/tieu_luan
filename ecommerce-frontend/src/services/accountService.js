@@ -22,18 +22,28 @@ export const accountService = {
 
   logout: async () => {
     try {
-      // Clear local storage
+      // Call logout endpoint (optional - can remove if you don't have one)
+      try {
+        await apiClient.post("/account/logout");
+      } catch (error) {
+        console.error("Logout API call failed:", error);
+        // Continue anyway
+      }
+
+      // Clear all local storage
       localStorage.removeItem("authToken");
       localStorage.removeItem("user");
 
-      // Optional: call logout endpoint if you have one
-      await apiClient.post("/account/logout");
+      // Clear session storage if you use it
+      sessionStorage.clear();
 
       return { success: true };
     } catch (error) {
-      // Still clear local storage even if API call fails
+      // Even if there's an error, clear local data
       localStorage.removeItem("authToken");
       localStorage.removeItem("user");
+      sessionStorage.clear();
+
       throw new Error(error.response?.data?.error || "Logout failed");
     }
   },

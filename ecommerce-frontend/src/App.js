@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  BrowserRouter,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import Home from "./components/Home";
 import Login from "./components/Login";
@@ -16,6 +11,7 @@ import Cart from "./components/Cart";
 import { AuthProvider } from "./components/AuthContext";
 import UserPage from "./components/UserPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminLayout from "./components/AdminLayout";
 
 function App() {
   const user = null;
@@ -36,6 +32,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireAdmin={true}>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            ></Route>
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<EmailVerification />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

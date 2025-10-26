@@ -10,7 +10,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
   }
 
   if (requireAdmin && user?.role !== "Admin") {
-    return <Navigate to="/" />;
+    return <Navigate to="/home" />;
   }
 
   return children;

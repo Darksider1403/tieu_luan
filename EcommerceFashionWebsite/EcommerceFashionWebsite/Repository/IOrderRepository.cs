@@ -17,5 +17,7 @@ namespace EcommerceFashionWebsite.Repository
         Task<int> GetTotalProductSoldByCategoryAsync(int categoryId, DateTime fromDate);
         Task<int> GetRevenueByCategoryAsync(int categoryId, DateTime fromDate);
         Task<bool> OrderExistsAsync(string orderId);
+        Task<bool> MergeSessionCartWithUserCartAsync(string sessionOrderId, int accountId);
+        Task<Order?> GetUserActiveOrderAsync(int accountId);
     }
 }
