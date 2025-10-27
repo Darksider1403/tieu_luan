@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, Outlet, Link, useLocation } from "react-router-dom";
+import React from "react";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Package,
@@ -11,180 +11,134 @@ import {
   X,
 } from "lucide-react";
 import { accountService } from "../../services/accountService";
+import { useState } from "react";
 
 function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    const userData = accountService.getUser();
-    if (!userData || userData.role !== "Admin") {
-      navigate("/login");
-      return;
-    }
-    setUser(userData);
-  }, [navigate]);
+  const menuItems = [
+    { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+    { path: "/admin/products", label: "Products", icon: Package },
+    { path: "/admin/orders", label: "Orders", icon: ShoppingCart },
+    { path: "/admin/users", label: "Users", icon: Users },
+    { path: "/admin/settings", label: "Settings", icon: Settings },
+  ];
 
   const handleLogout = async () => {
     try {
       await accountService.logout();
-      // Use window.location for full page reload
       window.location.href = "/login";
     } catch (error) {
       console.error("Logout error:", error);
-      // Clear data and redirect anyway
       localStorage.removeItem("authToken");
       localStorage.removeItem("user");
       window.location.href = "/login";
     }
   };
 
-  const isActive = (path) => {
-    return location.pathname === path;
-  };
-
-  const menuItems = [
-    {
-      path: "/admin",
-      icon: LayoutDashboard,
-      label: "Dashboard",
-    },
-    {
-      path: "/admin/products",
-      icon: Package,
-      label: "Products",
-    },
-    {
-      path: "/admin/orders",
-      icon: ShoppingCart,
-      label: "Orders",
-    },
-    {
-      path: "/admin/users",
-      icon: Users,
-      label: "Users",
-    },
-    {
-      path: "/admin/settings",
-      icon: Settings,
-      label: "Settings",
-    },
-  ];
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-100">
       {/* Sidebar */}
       <aside
-        className={`${
-          isSidebarOpen ? "w-64" : "w-20"
-        } bg-gray-900 text-white transition-all duration-300 fixed h-full z-30`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
-        {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800">
-          {isSidebarOpen && <h1 className="text-xl font-bold">Admin Panel</h1>}
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            {isSidebarOpen ? (
-              <X className="w-5 h-5" />
-            ) : (
-              <Menu className="w-5 h-5" />
-            )}
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="mt-6 px-3">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-3 px-3 py-3 rounded-lg mb-2 transition-colors ${
-                  isActive(item.path)
-                    ? "bg-purple-600 text-white"
-                    : "text-gray-300 hover:bg-gray-800"
-                }`}
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                {isSidebarOpen && (
-                  <span className="font-medium">{item.label}</span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* User Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-sm font-semibold">
-                {user.fullname?.charAt(0) || user.username?.charAt(0)}
-              </span>
-            </div>
-            {isSidebarOpen && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {user.fullname || user.username}
-                </p>
-                <p className="text-xs text-gray-400">Administrator</p>
-              </div>
-            )}
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+            <h1 className="text-xl font-bold text-purple-600">Admin Panel</h1>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-red-400 hover:bg-gray-800 transition-colors w-full ${
-              !isSidebarOpen && "justify-center"
-            }`}
-          >
-            <LogOut className="w-5 h-5" />
-            {isSidebarOpen && <span>Logout</span>}
-          </button>
+
+          {/* Navigation */}
+          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    isActive
+                      ? "bg-purple-50 text-purple-600"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Logout */}
+          <div className="p-4 border-t border-gray-200">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Logout</span>
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main
-        className={`flex-1 ${
-          isSidebarOpen ? "ml-64" : "ml-20"
-        } transition-all duration-300`}
-      >
+      <div className="lg:pl-64">
         {/* Top Bar */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              {menuItems.find((item) => isActive(item.path))?.label ||
-                "Dashboard"}
-            </h2>
-          </div>
-          <div className="flex items-center gap-4">
-            <a
-              href="/home"
-              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="flex items-center justify-between h-16 px-6">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden text-gray-500 hover:text-gray-700"
             >
-              View Website →
-            </a>
+              <Menu className="w-6 h-6" />
+            </button>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">
+                  {accountService.getUser()?.username || "Admin"}
+                </p>
+                <p className="text-xs text-gray-500">Administrator</p>
+              </div>
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <span className="text-purple-600 font-semibold">
+                  {accountService
+                    .getUser()
+                    ?.username?.charAt(0)
+                    .toUpperCase() || "A"}
+                </span>
+              </div>
+            </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <div className="p-6">
+        <main className="p-6">
+          {/* This Outlet renders the nested route content */}
           <Outlet />
-        </div>
-      </main>
+        </main>
+      </div>
+
+      {/* Overlay for mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 }
