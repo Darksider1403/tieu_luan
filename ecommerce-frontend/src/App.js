@@ -11,7 +11,12 @@ import Cart from "./components/Cart";
 import { AuthProvider } from "./components/AuthContext";
 import UserPage from "./components/UserPage";
 import ProtectedRoute from "./components/ProtectedRoute";
-import AdminLayout from "./components/AdminLayout";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import AdminProducts from "./components/admin/AdminProducts";
+import AdminOrders from "./components/admin/AdminOrders";
+import AdminUsers from "./components/admin/AdminUsers";
+import AdminSettings from "./components/admin/AdminSettings";
 
 function App() {
   const user = null;
@@ -40,6 +45,11 @@ function App() {
                 </ProtectedRoute>
               }
             ></Route>
+            <Route index element={<AdminDashboard />} />
+            <Route path="products" element={<AdminProducts />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="settings" element={<AdminSettings />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<EmailVerification />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />

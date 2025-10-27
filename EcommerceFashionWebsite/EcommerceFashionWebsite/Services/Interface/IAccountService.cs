@@ -7,6 +7,7 @@ namespace EcommerceFashionWebsite.Services.Interface
     {
         Task<Account?> GetAccountByUsernameAsync(string username);
         Task<Account?> GetAccountByIdAsync(int accountId);
+        Task<Account?> GetAccountByIdAsync(string accountId);
         Task<Account?> CheckLoginAsync(string username, string password);
         Task<bool> IsLoginSuccessAsync(Account account);
         Task<bool> IsPhoneValidAsync(string phone);
@@ -25,5 +26,15 @@ namespace EcommerceFashionWebsite.Services.Interface
         Task<bool> SendPasswordResetEmailAsync(Account account);
         Task<Account?> VerifyPasswordResetCodeAsync(string code);
         Task<bool> UpdatePasswordAsync(int accountId, string hashedPassword);
+        
+        Task<List<AccountDto>> GetAllAccountsAsync();
+        Task<bool> UpdateAccountStatusAsync(string accountId, int status);
+        Task<int> UpdateRoleAccountAsync(string accountId, int role);
+        Task<bool> DeleteAccountAsync(string accountId);
+        
+        Task<bool> UpdateAccountStatusAsync(int accountId, int status);
+        Task<int> UpdateRoleAccountAsync(int accountId, int role);
+        Task<bool> DeleteAccountAsync(int accountId);
+        Task<bool> UpdateAccountAsync(int accountId, UpdateAccountDto dto);
     }
 }

@@ -10,7 +10,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { accountService } from "../services/accountService";
+import { accountService } from "../../services/accountService";
 
 function AdminLayout() {
   const navigate = useNavigate();

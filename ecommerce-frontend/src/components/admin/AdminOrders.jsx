@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Eye, Filter, Download } from "lucide-react";
-import apiClient from "../services/apiService";
-import Toast from "./Toast";
+import apiClient from "../../services/apiService";
+import Toast from "../Toast";
 
 function AdminOrders() {
   const [orders, setOrders] = useState([]);

@@ -8,8 +8,8 @@ import {
   Filter,
   Download,
 } from "lucide-react";
-import { productService } from "../services/productService";
-import Toast from "./Toast";
+import { productService } from "../../services/productService";
+import Toast from "../Toast";
 
 function AdminProducts() {
   const [products, setProducts] = useState([]);

@@ -8,7 +8,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
-import apiClient from "../services/apiService";
+import apiClient from "../../services/apiService";
 
 function AdminDashboard() {
   const [stats, setStats] = useState({
