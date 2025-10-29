@@ -17,6 +17,8 @@ import AdminProducts from "./components/admin/AdminProducts";
 import AdminOrders from "./components/admin/AdminOrders";
 import AdminUsers from "./components/admin/AdminUsers";
 import AdminSettings from "./components/admin/AdminSettings";
+import Checkout from "./components/Checkout";
+import OrderSuccess from "./components/OrderSuccess";
 
 function App() {
   const user = null;
@@ -57,6 +59,8 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/cart" element={<Cart />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/order-success/:orderId" element={<OrderSuccess />} />
           </Routes>
         </Layout>
       </AuthProvider>

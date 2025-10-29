@@ -84,8 +84,19 @@ export default function Cart() {
       setError("An error occurred");
     }
   };
+
   const removeFromCart = async (productId) => {
-    await cartService.removeFromCart(productId);
+    try {
+      await cartService.removeFromCart(productId);
+
+      // Update UI immediately
+      setCartItems(cartItems.filter((item) => item.productId !== productId));
+
+      setMessage("Đã xóa sản phẩm khỏi giỏ hàng");
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      setError("Không thể xóa sản phẩm");
+    }
   };
 
   const calculateTotal = () => {

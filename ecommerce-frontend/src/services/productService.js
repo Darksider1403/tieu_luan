@@ -1,16 +1,18 @@
 import apiClient from "./apiService";
 
 export const productService = {
-  getSliders: async () => {
+  // Get all products (for admin)
+  getProducts: async () => {
     try {
-      const response = await apiClient.get("/product/sliders");
+      const response = await apiClient.get("/product/all");
       return response.data;
     } catch (error) {
-      console.error("Error fetching sliders:", error);
-      return [];
+      console.error("Error fetching products:", error);
+      throw error;
     }
   },
 
+  // Get single product by ID
   getProduct: async (productId) => {
     try {
       const response = await apiClient.get(`/product/${productId}`);
@@ -18,6 +20,65 @@ export const productService = {
     } catch (error) {
       console.error("Error fetching product:", error);
       throw error;
+    }
+  },
+
+  // Create product
+  createProduct: async (productData) => {
+    try {
+      const response = await apiClient.post("/product", productData);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating product:", error);
+      throw error;
+    }
+  },
+
+  // Update product
+  updateProduct: async (productId, productData) => {
+    try {
+      const response = await apiClient.put(
+        `/product/${productId}`,
+        productData
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error updating product:", error);
+      throw error;
+    }
+  },
+
+  // Delete product
+  deleteProduct: async (productId) => {
+    try {
+      const response = await apiClient.delete(`/product/${productId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      throw error;
+    }
+  },
+
+  // Update product status
+  updateProductStatus: async (productId, status) => {
+    try {
+      const response = await apiClient.patch(`/product/${productId}/status`, {
+        status,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error updating product status:", error);
+      throw error;
+    }
+  },
+
+  getSliders: async () => {
+    try {
+      const response = await apiClient.get("/product/sliders");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching sliders:", error);
+      return [];
     }
   },
 
@@ -67,6 +128,16 @@ export const productService = {
       throw error;
     }
   },
+
+  getCategories: async () => {
+    try {
+      const response = await apiClient.get("/product/categories");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      return {};
+    }
+  },
 };
 
 export const cartService = {
@@ -77,6 +148,39 @@ export const cartService = {
     } catch (error) {
       console.error("Cart size error:", error);
       return 0;
+    }
+  },
+
+  getCart: async () => {
+    try {
+      const response = await apiClient.get("/cart");
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+      return [];
+    }
+  },
+
+  updateCartItem: async (productId, quantity) => {
+    try {
+      const response = await apiClient.put("/cart/update", {
+        productId,
+        quantity,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error updating cart:", error);
+      throw error;
+    }
+  },
+
+  removeFromCart: async (productId) => {
+    try {
+      const response = await apiClient.delete(`/cart/${productId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error removing from cart:", error);
+      throw error;
     }
   },
 };
