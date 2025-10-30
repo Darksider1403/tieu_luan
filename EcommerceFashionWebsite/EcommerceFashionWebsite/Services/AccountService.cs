@@ -32,7 +32,25 @@ public class AccountService : IAccountService
 
     public async Task<Account?> GetAccountByIdAsync(int accountId)
     {
-        return await _accountRepository.GetAccountByIdAsync(accountId);
+        try
+        {
+            var account = await _accountRepository.GetAccountByIdAsync(accountId);
+            if (account == null)
+                return null;
+
+            // Get role from access_levels table
+            var roleInt = await _accountRepository.GetAccountRoleAsync(accountId);
+                
+            // Set the role property
+            account.Role = ConvertRoleToString(roleInt);
+
+            return account;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting account by ID {AccountId}", accountId);
+            return null;
+        }
     }
         
     public async Task<Account?> GetAccountByIdAsync(string accountId)
@@ -182,7 +200,16 @@ public class AccountService : IAccountService
 
     public async Task<int> GetRoleByAccountIdAsync(int accountId)
     {
-        return await _accountRepository.GetRoleByAccountIdAsync(accountId);
+        try
+        {
+            var role = await _accountRepository.GetAccountRoleAsync(accountId);
+            return role ?? 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting role for account {AccountId}", accountId);
+            return 0;
+        }
     }
         
     public async Task<Account?> GetAccountByUsernameAndEmailAsync(string username, string email)
@@ -222,34 +249,32 @@ public class AccountService : IAccountService
     {
         try
         {
-            var accounts = await _accountRepository.GetAllAccountsAsync();
-        
+            var accounts = await _accountRepository.GetAllAccountsWithRolesAsync();
             var accountDtos = new List<AccountDto>();
-        
+
             foreach (var account in accounts)
             {
-                // Get role for each account
-                var role = await GetRoleByAccountIdAsync(account.Id);
-                var roleString = role == 1 ? "Admin" : "User";
-            
+                var roleInt = await _accountRepository.GetAccountRoleAsync(account.Id);
+                    
                 accountDtos.Add(new AccountDto
                 {
                     Id = account.Id,
-                    Username = account.Username ?? string.Empty,
-                    Email = account.Email ?? string.Empty,
+                    Username = account.Username ?? "",
+                    Email = account.Email ?? "",
                     Fullname = account.Fullname,
                     NumberPhone = account.NumberPhone,
                     Status = account.Status,
-                    Role = roleString
+                    Role = ConvertRoleToString(roleInt) 
                 });
             }
-        
+
+            _logger.LogInformation("Retrieved {Count} accounts with roles", accountDtos.Count);
             return accountDtos;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in GetAllAccountsAsync");
-            throw;
+            _logger.LogError(ex, "Error getting all accounts");
+            return new List<AccountDto>();
         }
     }
 
@@ -260,7 +285,28 @@ public class AccountService : IAccountService
 
     public async Task<int> UpdateRoleAccountAsync(string accountId, int role)
     {
-        return await _accountRepository.UpdateRoleAccountAsync(accountId, role);
+        try
+        {
+            if (!int.TryParse(accountId, out int id))
+            {
+                _logger.LogWarning("Invalid account ID: {AccountId}", accountId);
+                return 0;
+            }
+
+            if (role < 0 || role > 1)
+            {
+                _logger.LogWarning("Invalid role value: {Role}", role);
+                return 0;
+            }
+
+            var result = await _accountRepository.UpdateAccountRoleAsync(id, role);
+            return result ? 1 : 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating role for account {AccountId}", accountId);
+            return 0;
+        }
     }
         
     public async Task<bool> DeleteAccountAsync(string accountId)
@@ -291,5 +337,34 @@ public class AccountService : IAccountService
     public async Task<bool> UpdateAccountAsync(int accountId, UpdateAccountDto dto)
     {
         return await _accountRepository.UpdateAccountAsync(accountId, dto);
+    }
+
+    public async Task<bool> UpdateAccountRoleAsync(int accountId, int role)
+    {
+        try
+        {
+            if (role < 0 || role > 1)
+            {
+                _logger.LogWarning("Invalid role value: {Role}", role);
+                return false;
+            }
+
+            return await _accountRepository.UpdateAccountRoleAsync(accountId, role);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in UpdateAccountRoleAsync");
+            return false;
+        }
+    }
+
+    private string ConvertRoleToString(int? role)
+    {
+        return role == 1 ? "Admin" : "User";
+    }
+    
+    private int ConvertRoleToInt(string role)
+    {
+        return role.Equals("Admin", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
     }
 }

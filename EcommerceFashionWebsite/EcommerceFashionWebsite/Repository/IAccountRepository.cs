@@ -27,6 +27,10 @@ public interface IAccountRepository
     Task<int> CreateVerifyEmailAsync(string code, DateTime dateCreated, DateTime dateExpired, bool status, int idAccount);
     Task<Account?> VerifyEmailAsync(string code);
     Task<Account?> VerifyPasswordResetCodeAsync(string code);
+  
+    Task<bool> UpdateAccountRoleAsync(int accountId, int role);
+    Task<List<Account>> GetAllAccountsWithRolesAsync();
+    Task<int?> GetAccountRoleAsync(int accountId);
     
     Task<List<Account>> GetAllAccountsAsync();
     Task<bool> DeleteAccountAsync(string accountId);

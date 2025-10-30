@@ -330,6 +330,85 @@ public class AccountRepository : IAccountRepository
         return verifyEmail?.Account;
     }
 
+    public async Task<bool> UpdateAccountRoleAsync(int accountId, int role)
+    {
+        try
+        {
+            // Check if account exists
+            var account = await _context.Accounts.FindAsync(accountId);
+            if (account == null)
+            {
+                _logger.LogWarning("Account not found: AccountId={AccountId}", accountId);
+                return false;
+            }
+
+            // Find existing access level
+            var accessLevel = await _context.AccessLevels
+                .FirstOrDefaultAsync(al => al.IdAccount == accountId);
+
+            if (accessLevel != null)
+            {
+                // Update existing role
+                accessLevel.Role = role;
+                _context.AccessLevels.Update(accessLevel);
+            }
+            else
+            {
+                // Create new access level
+                var newAccessLevel = new AccessLevel
+                {
+                    IdAccount = accountId,
+                    Role = role
+                };
+                await _context.AccessLevels.AddAsync(newAccessLevel);
+            }
+
+            await _context.SaveChangesAsync();
+                
+            _logger.LogInformation("Account role updated: AccountId={AccountId}, NewRole={Role}", accountId, role);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating account role for AccountId={AccountId}", accountId);
+            return false;
+        }
+    }
+
+    public async Task<List<Account>> GetAllAccountsWithRolesAsync()
+    {
+        try
+        {
+            var accounts = await _context.Accounts
+                .OrderByDescending(a => a.Id)
+                .ToListAsync();
+
+            return accounts;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting all accounts");
+            return new List<Account>();
+        }
+    }
+
+    public async Task<int?> GetAccountRoleAsync(int accountId)
+    {
+        try
+        {
+            var accessLevel = await _context.AccessLevels
+                .FirstOrDefaultAsync(al => al.IdAccount == accountId);
+
+            return accessLevel?.Role ?? 0; // Default to 0 (User) if no role found
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting account role for AccountId={AccountId}", accountId);
+            return 0;
+        }
+    }
+
+
     public async Task<List<Account>> GetAllAccountsAsync()
     {
         try

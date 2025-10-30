@@ -36,5 +36,7 @@ namespace EcommerceFashionWebsite.Services.Interface
         Task<int> UpdateRoleAccountAsync(int accountId, int role);
         Task<bool> DeleteAccountAsync(int accountId);
         Task<bool> UpdateAccountAsync(int accountId, UpdateAccountDto dto);
+        
+        Task<bool> UpdateAccountRoleAsync(int accountId, int role);
     }
 }

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cartService } from "../services/cartService";
 import { orderService } from "../services/orderService";
+import { addressService } from "../services/addressService";
 import Toast from "./Toast";
 
 function Checkout() {
@@ -19,20 +20,31 @@ function Checkout() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Address data
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
     address: "",
-    city: "",
-    district: "",
-    ward: "",
+    provinceCode: "",
+    provinceName: "",
+    districtCode: "",
+    districtName: "",
+    wardCode: "",
+    wardName: "",
     notes: "",
-    paymentMethod: "COD", // COD = Cash on Delivery
+    paymentMethod: "COD",
   });
 
   useEffect(() => {
     fetchCartItems();
+    fetchProvinces();
   }, []);
 
   const fetchCartItems = async () => {
@@ -62,19 +74,75 @@ function Checkout() {
     }
   };
 
-  const calculateTotal = () => {
-    return cartItems.reduce((total, item) => {
-      return total + item.price * item.quantity;
-    }, 0);
+  const fetchProvinces = async () => {
+    const data = await addressService.getProvinces();
+    setProvinces(data);
   };
 
-  const calculateShipping = () => {
-    // You can implement shipping calculation logic here
-    return 30000; // 30,000 VND flat rate
+  const handleProvinceChange = async (e) => {
+    const selectedCode = e.target.value;
+    const selectedProvince = provinces.find(
+      (p) => p.code.toString() === selectedCode
+    );
+
+    setFormData({
+      ...formData,
+      provinceCode: selectedCode,
+      provinceName: selectedProvince?.name || "",
+      districtCode: "",
+      districtName: "",
+      wardCode: "",
+      wardName: "",
+    });
+
+    // Reset districts and wards
+    setDistricts([]);
+    setWards([]);
+
+    if (selectedCode) {
+      setLoadingDistricts(true);
+      const districtData = await addressService.getDistricts(
+        parseInt(selectedCode)
+      );
+      setDistricts(districtData);
+      setLoadingDistricts(false);
+    }
   };
 
-  const calculateGrandTotal = () => {
-    return calculateTotal() + calculateShipping();
+  const handleDistrictChange = async (e) => {
+    const selectedCode = e.target.value;
+    const selectedDistrict = districts.find(
+      (d) => d.code.toString() === selectedCode
+    );
+
+    setFormData({
+      ...formData,
+      districtCode: selectedCode,
+      districtName: selectedDistrict?.name || "",
+      wardCode: "",
+      wardName: "",
+    });
+
+    // Reset wards
+    setWards([]);
+
+    if (selectedCode) {
+      setLoadingWards(true);
+      const wardData = await addressService.getWards(parseInt(selectedCode));
+      setWards(wardData);
+      setLoadingWards(false);
+    }
+  };
+
+  const handleWardChange = (e) => {
+    const selectedCode = e.target.value;
+    const selectedWard = wards.find((w) => w.code.toString() === selectedCode);
+
+    setFormData({
+      ...formData,
+      wardCode: selectedCode,
+      wardName: selectedWard?.name || "",
+    });
   };
 
   const handleInputChange = (e) => {
@@ -83,6 +151,20 @@ function Checkout() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const calculateTotal = () => {
+    return cartItems.reduce((total, item) => {
+      return total + item.price * item.quantity;
+    }, 0);
+  };
+
+  const calculateShipping = () => {
+    return 30000; // 30,000 VND flat rate
+  };
+
+  const calculateGrandTotal = () => {
+    return calculateTotal() + calculateShipping();
   };
 
   const validateForm = () => {
@@ -98,8 +180,16 @@ function Checkout() {
       setToast({ message: "Vui lòng nhập địa chỉ", type: "error" });
       return false;
     }
-    if (!formData.city.trim()) {
+    if (!formData.provinceCode) {
       setToast({ message: "Vui lòng chọn tỉnh/thành phố", type: "error" });
+      return false;
+    }
+    if (!formData.districtCode) {
+      setToast({ message: "Vui lòng chọn quận/huyện", type: "error" });
+      return false;
+    }
+    if (!formData.wardCode) {
+      setToast({ message: "Vui lòng chọn phường/xã", type: "error" });
       return false;
     }
     return true;
@@ -118,9 +208,9 @@ function Checkout() {
         email: formData.email,
         phone: formData.phone,
         address: formData.address,
-        city: formData.city,
-        district: formData.district,
-        ward: formData.ward,
+        city: formData.provinceName,
+        district: formData.districtName,
+        ward: formData.wardName,
         notes: formData.notes,
         paymentMethod: formData.paymentMethod,
         items: cartItems.map((item) => ({
@@ -132,21 +222,45 @@ function Checkout() {
         shippingFee: calculateShipping(),
       };
 
-      const response = await orderService.createOrder(orderData);
+      const orderResponse = await orderService.createOrder(orderData);
 
-      if (response.success) {
-        setToast({
-          message: "Đặt hàng thành công!",
-          type: "success",
-        });
+      if (orderResponse.success) {
+        const orderId = orderResponse.orderId;
 
-        // Clear cart after successful order
-        await cartService.clearCart();
+        if (formData.paymentMethod === "VNPAY") {
+          const paymentRequest = {
+            orderId: orderId,
+            amount: calculateGrandTotal(),
+            paymentMethod: "VNPAY",
+            returnUrl: `${window.location.origin}/payment-return`,
+          };
 
-        // Redirect to order confirmation page
-        setTimeout(() => {
-          navigate(`/order-success/${response.orderId}`);
-        }, 1500);
+          const paymentResponse = await orderService.createPayment(
+            paymentRequest
+          );
+
+          if (paymentResponse.success) {
+            window.location.href = paymentResponse.paymentUrl;
+          }
+        } else if (formData.paymentMethod === "MOMO") {
+          const paymentRequest = {
+            orderId: orderId,
+            amount: calculateGrandTotal(),
+            paymentMethod: "MOMO",
+            returnUrl: `${window.location.origin}/payment-return`,
+          };
+
+          const paymentResponse = await orderService.createMoMoPayment(
+            paymentRequest
+          );
+
+          if (paymentResponse.success) {
+            window.location.href = paymentResponse.paymentUrl;
+          }
+        } else {
+          await cartService.clearCart();
+          navigate(`/order-success/${orderId}`);
+        }
       }
     } catch (error) {
       console.error("Checkout error:", error);
@@ -246,7 +360,70 @@ function Checkout() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Địa chỉ <span className="text-red-500">*</span>
+                      Tỉnh/Thành phố <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.provinceCode}
+                      onChange={handleProvinceChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="">Chọn tỉnh/thành phố</option>
+                      {provinces.map((province) => (
+                        <option key={province.code} value={province.code}>
+                          {province.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Quận/Huyện <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.districtCode}
+                      onChange={handleDistrictChange}
+                      disabled={!formData.provinceCode || loadingDistricts}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100"
+                      required
+                    >
+                      <option value="">
+                        {loadingDistricts ? "Đang tải..." : "Chọn quận/huyện"}
+                      </option>
+                      {districts.map((district) => (
+                        <option key={district.code} value={district.code}>
+                          {district.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phường/Xã <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.wardCode}
+                      onChange={handleWardChange}
+                      disabled={!formData.districtCode || loadingWards}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100"
+                      required
+                    >
+                      <option value="">
+                        {loadingWards ? "Đang tải..." : "Chọn phường/xã"}
+                      </option>
+                      {wards.map((ward) => (
+                        <option key={ward.code} value={ward.code}>
+                          {ward.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Địa chỉ cụ thể <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -257,48 +434,6 @@ function Checkout() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       required
                     />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tỉnh/Thành phố <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quận/Huyện
-                      </label>
-                      <input
-                        type="text"
-                        name="district"
-                        value={formData.district}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phường/Xã
-                      </label>
-                      <input
-                        type="text"
-                        name="ward"
-                        value={formData.ward}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
-                    </div>
                   </div>
 
                   <div>
@@ -334,23 +469,52 @@ function Checkout() {
                       onChange={handleInputChange}
                       className="w-4 h-4 text-purple-600"
                     />
-                    <span className="ml-3 text-gray-900">
-                      Thanh toán khi nhận hàng (COD)
-                    </span>
+                    <div className="ml-3">
+                      <span className="text-gray-900 font-medium">
+                        Thanh toán khi nhận hàng (COD)
+                      </span>
+                      <p className="text-sm text-gray-500">
+                        Thanh toán bằng tiền mặt khi nhận hàng
+                      </p>
+                    </div>
                   </label>
 
                   <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
                     <input
                       type="radio"
                       name="paymentMethod"
-                      value="BANK"
-                      checked={formData.paymentMethod === "BANK"}
+                      value="MOMO"
+                      checked={formData.paymentMethod === "MOMO"}
                       onChange={handleInputChange}
                       className="w-4 h-4 text-purple-600"
                     />
-                    <span className="ml-3 text-gray-900">
-                      Chuyển khoản ngân hàng
-                    </span>
+                    <div className="ml-3 flex items-center gap-2">
+                      <span className="text-gray-900 font-medium">Ví MoMo</span>
+                      <img
+                        src="https://developers.momo.vn/v3/assets/images/square-logo-f81c1f34a0de94aaac14c405edcc67b6.png"
+                        alt="MoMo"
+                        className="h-6"
+                      />
+                    </div>
+                  </label>
+
+                  <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="VNPAY"
+                      checked={formData.paymentMethod === "VNPAY"}
+                      onChange={handleInputChange}
+                      className="w-4 h-4 text-purple-600"
+                    />
+                    <div className="ml-3 flex items-center gap-2">
+                      <span className="text-gray-900 font-medium">VNPay</span>
+                      <img
+                        src="https://vnpay.vn/s1/statics.vnpay.vn/2023/9/06ncktiwd6dc1694418196384.png"
+                        alt="VNPay"
+                        className="h-6"
+                      />
+                    </div>
                   </label>
                 </div>
               </div>

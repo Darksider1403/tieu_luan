@@ -4,10 +4,30 @@ export const orderService = {
   // Create a new order
   createOrder: async (orderData) => {
     try {
-      const response = await apiClient.post("/order/create", orderData);
+      const response = await apiClient.post("/order", orderData);
       return response.data;
     } catch (error) {
       console.error("Error creating order:", error);
+      throw error;
+    }
+  },
+
+  createPayment: async (paymentData) => {
+    try {
+      const response = await apiClient.post("/payment/vnpay", paymentData);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating payment:", error);
+      throw error;
+    }
+  },
+
+  createMoMoPayment: async (paymentData) => {
+    try {
+      const response = await apiClient.post("/payment/momo", paymentData);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating MoMo payment:", error);
       throw error;
     }
   },

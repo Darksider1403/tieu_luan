@@ -19,6 +19,7 @@ import AdminUsers from "./components/admin/AdminUsers";
 import AdminSettings from "./components/admin/AdminSettings";
 import Checkout from "./components/Checkout";
 import OrderSuccess from "./components/OrderSuccess";
+import PaymentReturn from "./components/PaymentReturn";
 
 function App() {
   const user = null;
@@ -61,6 +62,7 @@ function App() {
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+            <Route path="/payment-return" element={<PaymentReturn />} />
           </Routes>
         </Layout>
       </AuthProvider>

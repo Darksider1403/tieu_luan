@@ -37,6 +37,9 @@ namespace EcommerceFashionWebsite.Entity
         [NotMapped]
         public bool IsVerified { get; set; }
         
+        [NotMapped]
+        public string Role { get; set; } = "User";
+        
         public Account()
         {
         }
@@ -51,6 +54,7 @@ namespace EcommerceFashionWebsite.Entity
             Fullname = fullname;
             NumberPhone = numberPhone;
             Status = status;
+            Role = role == 1 ? "Admin" : "User";
         }
 
         public Account(int id, string email, bool isVerified)

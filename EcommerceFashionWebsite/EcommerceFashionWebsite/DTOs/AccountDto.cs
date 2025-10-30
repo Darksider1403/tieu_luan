@@ -8,5 +8,5 @@ public class AccountDto
     public string? Fullname { get; set; } = string.Empty;
     public string? NumberPhone { get; set; } = string.Empty;
     public int Status { get; set; }
-    public string Role { get; set; } = "User";
+    public string Role { get; set; } = "";
 }

@@ -85,6 +85,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 // Add repositories and services
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<AddressService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IAccountService, AccountService>();
@@ -96,6 +98,11 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartService, CartService>();
+
+// Connect payment gateway
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IPaymentService, VNPayService>();
+builder.Services.AddScoped<MoMoService>();
 
 var app = builder.Build();
 
