@@ -1,13 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ShoppingBag,
-  CreditCard,
-  MapPin,
-  User,
-  Phone,
-  Mail,
-} from "lucide-react";
+import { ShoppingBag, CreditCard, MapPin, User } from "lucide-react";
 import { cartService } from "../services/cartService";
 import { orderService } from "../services/orderService";
 import { addressService } from "../services/addressService";
@@ -42,12 +35,7 @@ function Checkout() {
     paymentMethod: "COD",
   });
 
-  useEffect(() => {
-    fetchCartItems();
-    fetchProvinces();
-  }, []);
-
-  const fetchCartItems = async () => {
+  const fetchCartItems = useCallback(async () => {
     try {
       setLoading(true);
       const data = await cartService.getCartItems();
@@ -72,22 +60,33 @@ function Checkout() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
-  const fetchProvinces = async () => {
-    const data = await addressService.getProvinces();
-    setProvinces(data);
-  };
+  const fetchProvinces = useCallback(async () => {
+    try {
+      const data = await addressService.getProvinces();
+      setProvinces(data);
+    } catch (error) {
+      console.error("Error fetching provinces:", error);
+      setToast({
+        message: "Không thể tải danh sách tỉnh/thành phố",
+        type: "error",
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCartItems();
+    fetchProvinces();
+  }, [fetchCartItems, fetchProvinces]);
 
   const handleProvinceChange = async (e) => {
-    const selectedCode = e.target.value;
-    const selectedProvince = provinces.find(
-      (p) => p.code.toString() === selectedCode
-    );
+    const selectedId = e.target.value;
+    const selectedProvince = provinces.find((p) => p.id === selectedId);
 
     setFormData({
       ...formData,
-      provinceCode: selectedCode,
+      provinceCode: selectedId,
       provinceName: selectedProvince?.name || "",
       districtCode: "",
       districtName: "",
@@ -95,52 +94,46 @@ function Checkout() {
       wardName: "",
     });
 
-    // Reset districts and wards
     setDistricts([]);
     setWards([]);
 
-    if (selectedCode) {
+    if (selectedId) {
       setLoadingDistricts(true);
-      const districtData = await addressService.getDistricts(
-        parseInt(selectedCode)
-      );
+      const districtData = await addressService.getDistricts(selectedId);
       setDistricts(districtData);
       setLoadingDistricts(false);
     }
   };
 
   const handleDistrictChange = async (e) => {
-    const selectedCode = e.target.value;
-    const selectedDistrict = districts.find(
-      (d) => d.code.toString() === selectedCode
-    );
+    const selectedId = e.target.value;
+    const selectedDistrict = districts.find((d) => d.id === selectedId);
 
     setFormData({
       ...formData,
-      districtCode: selectedCode,
+      districtCode: selectedId,
       districtName: selectedDistrict?.name || "",
       wardCode: "",
       wardName: "",
     });
 
-    // Reset wards
     setWards([]);
 
-    if (selectedCode) {
+    if (selectedId) {
       setLoadingWards(true);
-      const wardData = await addressService.getWards(parseInt(selectedCode));
+      const wardData = await addressService.getWards(selectedId);
       setWards(wardData);
       setLoadingWards(false);
     }
   };
 
   const handleWardChange = (e) => {
-    const selectedCode = e.target.value;
-    const selectedWard = wards.find((w) => w.code.toString() === selectedCode);
+    const selectedId = e.target.value;
+    const selectedWard = wards.find((w) => w.id === selectedId);
 
     setFormData({
       ...formData,
-      wardCode: selectedCode,
+      wardCode: selectedId,
       wardName: selectedWard?.name || "",
     });
   };
@@ -174,6 +167,15 @@ function Checkout() {
     }
     if (!formData.phone.trim()) {
       setToast({ message: "Vui lòng nhập số điện thoại", type: "error" });
+      return false;
+    }
+    const phoneRegex = /^[\d]{10,11}$/;
+    if (!phoneRegex.test(formData.phone.trim())) {
+      setToast({ message: "Số điện thoại không hợp lệ", type: "error" });
+      return false;
+    }
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setToast({ message: "Email không hợp lệ", type: "error" });
       return false;
     }
     if (!formData.address.trim()) {
@@ -240,7 +242,13 @@ function Checkout() {
           );
 
           if (paymentResponse.success) {
+            await cartService.clearCart();
             window.location.href = paymentResponse.paymentUrl;
+          } else {
+            setToast({
+              message: "Không thể tạo thanh toán VNPay",
+              type: "error",
+            });
           }
         } else if (formData.paymentMethod === "MOMO") {
           const paymentRequest = {
@@ -255,12 +263,23 @@ function Checkout() {
           );
 
           if (paymentResponse.success) {
+            await cartService.clearCart();
             window.location.href = paymentResponse.paymentUrl;
+          } else {
+            setToast({
+              message: "Không thể tạo thanh toán MoMo",
+              type: "error",
+            });
           }
         } else {
           await cartService.clearCart();
           navigate(`/order-success/${orderId}`);
         }
+      } else {
+        setToast({
+          message: orderResponse.error || "Đặt hàng thất bại",
+          type: "error",
+        });
       }
     } catch (error) {
       console.error("Checkout error:", error);
@@ -370,7 +389,10 @@ function Checkout() {
                     >
                       <option value="">Chọn tỉnh/thành phố</option>
                       {provinces.map((province) => (
-                        <option key={province.code} value={province.code}>
+                        <option
+                          key={province.id}
+                          value={province.id.toString()}
+                        >
                           {province.name}
                         </option>
                       ))}
@@ -392,7 +414,10 @@ function Checkout() {
                         {loadingDistricts ? "Đang tải..." : "Chọn quận/huyện"}
                       </option>
                       {districts.map((district) => (
-                        <option key={district.code} value={district.code}>
+                        <option
+                          key={district.id}
+                          value={district.id.toString()}
+                        >
                           {district.name}
                         </option>
                       ))}
@@ -414,7 +439,7 @@ function Checkout() {
                         {loadingWards ? "Đang tải..." : "Chọn phường/xã"}
                       </option>
                       {wards.map((ward) => (
-                        <option key={ward.code} value={ward.code}>
+                        <option key={ward.id} value={ward.id.toString()}>
                           {ward.name}
                         </option>
                       ))}
@@ -491,7 +516,7 @@ function Checkout() {
                     <div className="ml-3 flex items-center gap-2">
                       <span className="text-gray-900 font-medium">Ví MoMo</span>
                       <img
-                        src="https://developers.momo.vn/v3/assets/images/square-logo-f81c1f34a0de94aaac14c405edcc67b6.png"
+                        src="https://static.momocdn.net/app/img/payment/logo.png"
                         alt="MoMo"
                         className="h-6"
                       />

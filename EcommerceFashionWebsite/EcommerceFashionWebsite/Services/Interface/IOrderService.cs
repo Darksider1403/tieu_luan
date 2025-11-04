@@ -7,7 +7,7 @@ namespace EcommerceFashionWebsite.Services.Interface
         Task<int> GetTotalOrdersAsync();
         Task<OrderDto?> GetOrderByIdAsync(string orderId);
         Task<List<OrderDto>> GetOrdersByAccountIdAsync(int accountId);
-        Task<string> CreateOrderAsync(int accountId, CreateOrderDto dto);
+        Task<string> CreateOrderAsync(int userId, CreateOrderDto dto);
         Task<bool> UpdateOrderStatusAsync(string orderId, int status);
         Task<List<OrderDto>> GetAllOrdersAsync();
         Task<int> GetTotalProductSoldByCategoryAsync(int categoryId, DateTime fromDate);

@@ -19,6 +19,7 @@ public class AccountController : ControllerBase
     private readonly IEmailService _emailService;
     private readonly IJwtService _jwtService;
     private readonly IOrderRepository _orderRepository;
+    private readonly IProductService _productService;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(IEmailService emailService,
@@ -26,6 +27,7 @@ public class AccountController : ControllerBase
         IEncryptService encryptService,
         IOrderRepository orderRepository,
         IJwtService jwtService,
+        IProductService productService,
         ILogger<AccountController> logger)
     {
         _emailService = emailService;
@@ -33,6 +35,7 @@ public class AccountController : ControllerBase
         _encryptService = encryptService;
         _jwtService = jwtService;
         _orderRepository = orderRepository;
+        _productService = productService;
         _logger = logger;
     }
 

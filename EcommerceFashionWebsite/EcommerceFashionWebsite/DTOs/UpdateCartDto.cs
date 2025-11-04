@@ -1,7 +1,7 @@
 ﻿namespace EcommerceFashionWebsite.DTOs;
 
-public class AddRatingDto
+public class UpdateCartDto
 {
     public string ProductId { get; set; } = string.Empty;
-    public int Rating { get; set; }
+    public int Quantity { get; set; }
 }

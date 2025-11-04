@@ -7,6 +7,7 @@ E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsit
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\EcommerceFashionWebsite.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\EcommerceFashionWebsite.pdb
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Humanizer.dll
+E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.AspNetCore.OpenApi.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.Bcl.AsyncInterfaces.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.Build.Locator.dll
@@ -30,6 +31,12 @@ E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsit
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.Extensions.Logging.Abstractions.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.Extensions.Options.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.Extensions.Primitives.dll
+E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.Abstractions.dll
+E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.JsonWebTokens.dll
+E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.Logging.dll
+E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.dll
+E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.OpenApi.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Mono.TextTemplating.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\MySqlConnector.dll
@@ -43,6 +50,7 @@ E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsit
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\System.Composition.Hosting.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\System.Composition.Runtime.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\System.Composition.TypedParts.dll
+E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\cs\Microsoft.CodeAnalysis.resources.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\de\Microsoft.CodeAnalysis.resources.dll
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\es\Microsoft.CodeAnalysis.resources.dll
@@ -116,6 +124,7 @@ E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsit
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\EcommerceFashionWebsite.csproj.CoreCompileInputs.cache
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\EcommerceFashionWebsite.MvcApplicationPartsAssemblyInfo.cs
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\EcommerceFashionWebsite.MvcApplicationPartsAssemblyInfo.cache
+E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\EcommerceFashionWebsite.sourcelink.json
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\rjimswa.dswa.cache.json
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\rjsmrazor.dswa.cache.json
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json
@@ -130,12 +139,3 @@ E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsit
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\EcommerceFashionWebsite.pdb
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\EcommerceFashionWebsite.genruntimeconfig.cache
 E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\ref\EcommerceFashionWebsite.dll
-E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\obj\Debug\net9.0\EcommerceFashionWebsite.sourcelink.json
-E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
-E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.Abstractions.dll
-E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.JsonWebTokens.dll
-E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.Logging.dll
-E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.dll
-E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
-E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
-E:\tailieu\hoc_ki1_nam5\tieu_luan\EcommerceFashionWebsite\EcommerceFashionWebsite\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll

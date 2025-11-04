@@ -40,14 +40,6 @@ namespace EcommerceFashionWebsite.Services
             return productDtos;
         }
 
-        public async Task<ProductDto?> GetProductByIdAsync(string productId)
-        {
-            var product = await _productRepository.GetProductByIdAsync(productId);
-            if (product == null) return null;
-
-            return await MapToDtoAsync(product);
-        }
-
         public async Task<List<ProductDto>> GetProductsByCategoryAsync(int categoryId, int limit = 15)
         {
             var products = await _productRepository.GetProductsByCategoryAsync(categoryId, limit);
@@ -309,6 +301,104 @@ namespace EcommerceFashionWebsite.Services
             }
         }
 
+        public async Task<ProductDto?> GetProductByIdAsync(string productId)
+        {
+            try
+            {
+                var product = await _productRepository.GetProductByIdAsync(productId);
+                if (product == null)
+                    return null;
+
+                var thumbnailImage = await _productRepository.GetProductThumbnailAsync(productId);
+                var averageRating = await _productRepository.GetProductAverageRatingAsync(productId);
+                var totalRatings = await _productRepository.GetProductTotalRatingsAsync(productId);
+
+                return new ProductDto
+                {
+                    Id = product.Id,
+                    Name = product.Name,
+                    Price = product.Price,
+                    Description = $"{product.Material} - {product.Size} - {product.Color}",
+                    Quantity = product.Quantity,
+                    Status = product.Status,
+                    CategoryId = product.IdCategory,
+                    Gender = product.Gender,
+                    ThumbnailImage = thumbnailImage,
+                    AverageRating = averageRating,
+                    TotalRatings = totalRatings
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting product by ID: {ProductId}", productId);
+                return null;
+            }
+        }
+        
+        public async Task<bool> AddOrUpdateProductRatingAsync(string productId, int userId, int rating)
+        {
+            try
+            {
+                // Check if user has purchased the product
+                var hasPurchased = await _productRepository.HasUserPurchasedProductAsync(productId, userId);
+                if (!hasPurchased)
+                {
+                    _logger.LogWarning("User {UserId} tried to rate product {ProductId} without purchasing", 
+                        userId, productId);
+                    return false;
+                }
+
+                // Validate rating
+                if (rating < 1 || rating > 5)
+                {
+                    _logger.LogWarning("Invalid rating value: {Rating}", rating);
+                    return false;
+                }
+
+                var result = await _productRepository.AddOrUpdateProductRatingAsync(productId, userId, rating);
+                return result > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding/updating product rating");
+                return false;
+            }
+        }
+
+        public async Task<ProductRatingInfoDto> GetProductRatingInfoAsync(string productId, int? userId = null)
+        {
+            try
+            {
+                var averageRating = await _productRepository.GetProductAverageRatingAsync(productId);
+                var totalRatings = await _productRepository.GetProductTotalRatingsAsync(productId);
+                var distribution = await _productRepository.GetProductRatingDistributionAsync(productId);
+
+                var result = new ProductRatingInfoDto
+                {
+                    AverageRating = averageRating,
+                    TotalRatings = totalRatings,
+                    RatingDistribution = distribution,
+                    CanUserRate = false,
+                    HasUserRated = false,
+                    UserRating = null
+                };
+
+                if (userId.HasValue)
+                {
+                    result.HasUserRated = await _productRepository.HasUserRatedAsync(productId, userId.Value);
+                    result.UserRating = await _productRepository.GetUserRatingAsync(productId, userId.Value);
+                    result.CanUserRate = await _productRepository.HasUserPurchasedProductAsync(productId, userId.Value);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting product rating info for {ProductId}", productId);
+                return new ProductRatingInfoDto();
+            }
+        }
+
         // Updated mapping method that populates thumbnail and rating
         private async Task<ProductDto> MapToDtoAsync(Product product)
         {
@@ -328,7 +418,7 @@ namespace EcommerceFashionWebsite.Services
                 IdCategory = product.IdCategory,
                 Status = product.Status,
                 ThumbnailImage = thumbnailImage,
-                Rating = rating
+                AverageRating = rating
             };
         }
 
@@ -348,7 +438,7 @@ namespace EcommerceFashionWebsite.Services
                 IdCategory = product.IdCategory,
                 Status = product.Status,
                 ThumbnailImage = string.Empty,
-                Rating = 0.0 
+                AverageRating = 0.0 
             };
         }
     }

@@ -32,12 +32,12 @@ namespace EcommerceFashionWebsite.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // ===== Product Configuration =====
             modelBuilder.Entity<Product>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.ToTable("products");
             
-                // Map only existing columns
                 entity.Property(e => e.Id).HasColumnName("id").IsRequired();
                 entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(255);
                 entity.Property(e => e.Price).HasColumnName("price");
@@ -50,6 +50,7 @@ namespace EcommerceFashionWebsite.Data
                 entity.Property(e => e.IdCategory).HasColumnName("idCategory").HasMaxLength(50);
             });
             
+            // ===== ProductComment Configuration =====
             modelBuilder.Entity<ProductComment>(entity =>
             {   
                 entity.HasKey(e => e.Id);
@@ -64,37 +65,90 @@ namespace EcommerceFashionWebsite.Data
                 entity.Property(e => e.Status).HasColumnName("status");
             });
             
-            modelBuilder.Entity<Cart>()
-                .HasOne(c => c.Order)
-                .WithMany(o => o.OrderDetail)
-                .HasForeignKey(c => c.IdOrder)
-                .OnDelete(DeleteBehavior.Cascade);
+            // ===== CART CONFIGURATION - CRITICAL FIX =====
+            modelBuilder.Entity<Cart>(entity =>
+            {
+                entity.ToTable("carts");
+                
+                // ONLY id is the primary key!
+                entity.HasKey(c => c.Id);
+                
+                // Map all properties explicitly
+                entity.Property(c => c.Id)
+                    .HasColumnName("id")
+                    .ValueGeneratedOnAdd();
+                
+                entity.Property(c => c.IdProduct)
+                    .HasColumnName("idProduct")
+                    .HasMaxLength(10)
+                    .IsRequired();
+                
+                entity.Property(c => c.Quantity)
+                    .HasColumnName("quantity")
+                    .IsRequired();
+                
+                entity.Property(c => c.IdAccount)
+                    .HasColumnName("idAccount")
+                    .IsRequired(false); // Nullable
+                
+                entity.Property(c => c.IdOrder)
+                    .HasColumnName("idOrder")
+                    .HasMaxLength(50)
+                    .IsRequired(false); // Nullable
+                
+                entity.Property(c => c.Price)
+                    .HasColumnName("price")
+                    .IsRequired();
+                
+                entity.Property(c => c.CreatedAt)
+                    .HasColumnName("created_at");
+                
+                entity.Property(c => c.UpdatedAt)
+                    .HasColumnName("updated_at");
 
-            modelBuilder.Entity<Cart>()
-                .HasOne(c => c.Product)
-                .WithMany(p => p.Carts)
-                .HasForeignKey(c => c.IdProduct)
-                .OnDelete(DeleteBehavior.Cascade);
+                // Configure relationships
+                entity.HasOne(c => c.Product)
+                    .WithMany(p => p.Carts)
+                    .HasForeignKey(c => c.IdProduct)
+                    .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Order>()
-                .HasOne(o => o.Account)
-                .WithMany()
-                .HasForeignKey(o => o.IdAccount)
-                .OnDelete(DeleteBehavior.SetNull);
+                entity.HasOne(c => c.Order)
+                    .WithMany(o => o.OrderDetail)
+                    .HasForeignKey(c => c.IdOrder)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired(false); // Nullable foreign key
+
+                entity.HasOne(c => c.Account)
+                    .WithMany()
+                    .HasForeignKey(c => c.IdAccount)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired(false); // Nullable foreign key
+
+                // Add indexes for performance
+                entity.HasIndex(c => c.IdAccount);
+                entity.HasIndex(c => c.IdOrder);
+                entity.HasIndex(c => c.IdProduct);
+            });
+
+            // ===== Order Configuration =====
+            modelBuilder.Entity<Order>(entity =>
+            {
+                entity.HasOne(o => o.Account)
+                    .WithMany()
+                    .HasForeignKey(o => o.IdAccount)
+                    .OnDelete(DeleteBehavior.SetNull);
+                
+                entity.HasMany(o => o.OrderDetail)
+                    .WithOne(od => od.Order)
+                    .HasForeignKey(od => od.IdOrder);
+            });
             
+            // ===== Category Configuration =====
             modelBuilder.Entity<Category>()
                 .HasMany<Product>()
                 .WithOne()
                 .HasForeignKey(p => p.IdCategory)
                 .HasPrincipalKey(c => c.Id);
-            
-            modelBuilder.Entity<Cart>()
-                .HasKey(od => new { od.IdOrder, od.IdProduct });
-        
-            modelBuilder.Entity<Order>()
-                .HasMany(o => o.OrderDetail)
-                .WithOne(od => od.Order)
-                .HasForeignKey(od => od.IdOrder);
         }
     }
 }

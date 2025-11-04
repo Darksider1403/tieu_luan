@@ -11,12 +11,23 @@ namespace EcommerceFashionWebsite.Controller
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
+        private readonly ICartService _cartService;
         private readonly ILogger<OrderController> _logger;
 
-        public OrderController(IOrderService orderService, ILogger<OrderController> logger)
+        public OrderController(
+            IOrderService orderService,
+            ICartService cartService,
+            ILogger<OrderController> logger)
         {
             _orderService = orderService;
+            _cartService = cartService;
             _logger = logger;
+        }
+
+        private int? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            return int.TryParse(userIdClaim, out int userId) ? userId : null;
         }
 
         [HttpGet]
@@ -25,13 +36,13 @@ namespace EcommerceFashionWebsite.Controller
         {
             try
             {
-                var userIdClaim = User.FindFirst("UserId")?.Value;
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
                 {
                     return Unauthorized(new { error = "User not authenticated" });
                 }
 
-                var orders = await _orderService.GetOrdersByAccountIdAsync(userId);
+                var orders = await _orderService.GetOrdersByAccountIdAsync(userId.Value);
                 return Ok(orders);
             }
             catch (Exception ex)
@@ -67,22 +78,35 @@ namespace EcommerceFashionWebsite.Controller
         {
             try
             {
-                var userIdClaim = User.FindFirst("UserId")?.Value;
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
                 {
                     return Unauthorized(new { error = "User not authenticated" });
                 }
 
-                if (dto.Items == null || !dto.Items.Any())
+                // Get user's cart items
+                var cartItems = await _cartService.GetUserCartItemsAsync(userId.Value);
+                
+                if (!cartItems.Any())
                 {
-                    return BadRequest(new { error = "Order must contain at least one item" });
+                    return BadRequest(new { error = "Cart is empty. Please add items before checkout." });
                 }
 
-                var orderId = await _orderService.CreateOrderAsync(userId, dto);
+                // Create the order with items from cart
+                var orderId = await _orderService.CreateOrderAsync(userId.Value, dto);
                 
-                _logger.LogInformation("Order created: {OrderId} by user: {UserId}", orderId, userId);
+                // Convert cart items to order items
+                await _cartService.ConvertCartToOrderAsync(userId.Value, orderId);
+                
+                _logger.LogInformation("Order created: {OrderId} by user: {UserId} with {ItemCount} items", 
+                    orderId, userId.Value, cartItems.Count);
                 
                 return Ok(new { success = true, orderId = orderId, message = "Order created successfully" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Invalid operation during order creation");
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {

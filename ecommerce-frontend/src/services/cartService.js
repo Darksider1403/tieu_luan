@@ -1,17 +1,8 @@
+// cartService.js
 import apiClient from "./apiService";
 
 export const cartService = {
-  getCartSize: async () => {
-    try {
-      const response = await apiClient.get("/cart/size");
-      return response.data.cartSize || 0;
-    } catch (error) {
-      console.error("Cart size error:", error);
-      return 0;
-    }
-  },
-
-  addToCart: async (productId, quantity = 1) => {
+  async addToCart(productId, quantity = 1) {
     try {
       const response = await apiClient.post("/cart/add", {
         productId,
@@ -24,17 +15,30 @@ export const cartService = {
     }
   },
 
-  getCartItems: async () => {
+  async getCartItems() {
     try {
       const response = await apiClient.get("/cart");
-      return response.data || [];
+      return response.data;
     } catch (error) {
       console.error("Error fetching cart items:", error);
+      // Return empty array instead of throwing to prevent UI crash
       return [];
     }
   },
 
-  removeFromCart: async (productId) => {
+  async updateQuantity(productId, quantity) {
+    try {
+      const response = await apiClient.put(`/cart/update/${productId}`, {
+        quantity,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      throw error;
+    }
+  },
+
+  async removeFromCart(productId) {
     try {
       const response = await apiClient.delete(`/cart/remove/${productId}`);
       return response.data;
@@ -44,7 +48,7 @@ export const cartService = {
     }
   },
 
-  clearCart: async () => {
+  async clearCart() {
     try {
       const response = await apiClient.delete("/cart/clear");
       return response.data;
@@ -54,15 +58,13 @@ export const cartService = {
     }
   },
 
-  updateQuantity: async (productId, quantity) => {
+  async getCartSize() {
     try {
-      const response = await apiClient.put(`/cart/update/${productId}`, {
-        quantity,
-      });
-      return response.data;
+      const response = await apiClient.get("/cart/size");
+      return response.data.cartSize || 0;
     } catch (error) {
-      console.error("Error updating quantity:", error);
-      throw error;
+      console.error("Error getting cart size:", error);
+      return 0;
     }
   },
 };

@@ -25,5 +25,8 @@ namespace EcommerceFashionWebsite.Services.Interface
         Task<List<ProductCommentDto>> GetProductCommentsAsync(string productId);
         Task<bool> AddProductRatingAsync(string productId, int accountId, int rating);
         Task<bool> AddProductCommentAsync(string productId, int accountId, string content);
+        
+        Task<ProductRatingInfoDto> GetProductRatingInfoAsync(string productId, int? userId = null);
+        Task<bool> AddOrUpdateProductRatingAsync(string productId, int userId, int rating);
     }
 }

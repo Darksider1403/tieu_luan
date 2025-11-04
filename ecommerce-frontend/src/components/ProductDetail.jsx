@@ -5,6 +5,7 @@ import { productService } from "../services/productService";
 import { cartService } from "../services/cartService";
 import ProductImageGallery from "./ProductImageGallery";
 import Toast from "./Toast";
+import ProductRating from "./ProductRating";
 
 function ProductDetail() {
   const { id } = useParams();
@@ -13,16 +14,13 @@ function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [product, setProduct] = useState(null);
-  const [productRating, setProductRating] = useState(0);
-  const [comments, setComments] = useState([]);
-  const [imageMap, setImageMap] = useState({});
-  const [cartSize, setCartSize] = useState(0);
   const [images, setImages] = useState({});
   const [selectedImage, setSelectedImage] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Consolidated fetch effect
   useEffect(() => {
     if (!id) {
       setError("No product ID provided");
@@ -37,8 +35,6 @@ function ProductDetail() {
 
         const data = await productService.getProduct(id);
         setProduct(data);
-        setProductRating(data.rating || 0);
-        setComments(data.comments || []);
 
         const imagesData = await productService.getProductImages(id);
         console.log("Images loaded:", imagesData);
@@ -54,12 +50,7 @@ function ProductDetail() {
     fetchProductDetails();
   }, [id]);
 
-  useEffect(() => {
-    if (imageMap && Object.keys(imageMap).length > 0) {
-      setSelectedImage(Object.values(imageMap)[0]);
-    }
-  }, [imageMap]);
-
+  // Set first image when images are loaded
   useEffect(() => {
     if (Object.keys(images).length > 0) {
       const firstImage = images["0"];
@@ -69,11 +60,25 @@ function ProductDetail() {
     }
   }, [images]);
 
+  const handleRatingUpdate = () => {
+    // Refresh product data when rating is updated
+    if (id) {
+      const refetchProduct = async () => {
+        try {
+          const data = await productService.getProduct(id);
+          setProduct(data);
+        } catch (err) {
+          console.error("Error refreshing product:", err);
+        }
+      };
+      refetchProduct();
+    }
+  };
+
   const updateCartSize = async () => {
     try {
       const response = await fetch("http://localhost:5001/api/cart/size");
       const data = await response.json();
-      setCartSize(data.cartSize || 0);
     } catch (error) {
       console.error("Error updating cart size:", error);
     }
@@ -91,7 +96,6 @@ function ProductDetail() {
         await cartService.addToCart(product.id, 1);
       }
 
-      setCartSize((prevSize) => prevSize + quantity);
       setToast({
         message: `Đã thêm ${quantity} sản phẩm vào giỏ hàng!`,
         type: "success",
@@ -213,11 +217,11 @@ function ProductDetail() {
               {product.name}
             </h1>
 
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex">{renderStars(productRating)}</div>
-              <span className="text-sm text-gray-600">
-                {productRating.toFixed(1)} ({comments.length} đánh giá)
-              </span>
+            <div className="mt-8">
+              <ProductRating
+                productId={id}
+                onRatingSubmit={handleRatingUpdate}
+              />
             </div>
 
             <p className="text-gray-700 mb-4">

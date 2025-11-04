@@ -58,17 +58,17 @@ namespace EcommerceFashionWebsite.Services
         public async Task<List<OrderDto>> GetOrdersByAccountIdAsync(int accountId)
         {
             var orders = await _orderRepository.GetOrdersByAccountIdAsync(accountId);
-            
+
             var orderDtos = new List<OrderDto>();
             foreach (var order in orders)
             {
                 var totalPrice = await _orderRepository.GetTotalPriceOrderDetailAsync(order.Id);
-                
+
                 orderDtos.Add(new OrderDto
                 {
                     Id = order.Id,
-                     DateBuy = order.DateBuy ?? DateTime.Now,
-                     DateArrival = order.DateArrival ?? DateTime.Now,
+                    DateBuy = order.DateBuy ?? DateTime.Now,
+                    DateArrival = order.DateArrival ?? DateTime.Now,
                     Address = order.Address,
                     NumberPhone = order.NumberPhone,
                     Status = order.Status,
@@ -88,46 +88,38 @@ namespace EcommerceFashionWebsite.Services
             return orderDtos;
         }
 
-        public async Task<string> CreateOrderAsync(int accountId, CreateOrderDto dto)
+        public async Task<string> CreateOrderAsync(int userId, CreateOrderDto dto)
         {
-            var order = new Order
+            try
             {
-                Address = dto.Address,
-                Status = 0, // Pending
-                IdAccount = accountId,
-                DateBuy = DateTime.Now,
-                DateArrival = DateTime.Now.AddDays(7),
-                NumberPhone = dto.NumberPhone,
-                IsVerified = false
-            };
+                // Generate unique order ID
+                var orderId = await GenerateUniqueOrderIdAsync();
 
-            var orderId = await _orderRepository.CreateOrderAsync(order);
-
-            // Add order details and decrement product quantities
-            foreach (var item in dto.Items)
-            {
-                var product = await _productRepository.GetProductByIdAsync(item.ProductId);
-                if (product == null) continue;
-
-                var orderDetail = new Cart
+                var order = new Order
                 {
-                    IdOrder = orderId,
-                    IdProduct = item.ProductId,
-                    Quantity = item.Quantity,
-                    Price = product.Price * item.Quantity
+                    Id = orderId,
+                    IdAccount = userId,
+                    Address = dto.Address,
+                    NumberPhone = dto.Phone,
+                    Status = dto.PaymentMethod == "COD" ? 0 : 0, // 0 = Pending payment
+                    DateBuy = DateTime.Now,
+                    DateArrival = DateTime.Now.AddDays(7),
+                    IsVerified = false
                 };
 
-                await _orderRepository.AddOrderDetailAsync(orderDetail);
-                
-                // Decrement product quantity
-                // Implement this in ProductRepository if needed
+                await _orderRepository.CreateOrderAsync(order);
+
+                _logger.LogInformation("Order {OrderId} created for user {UserId}", orderId, userId);
+
+                return orderId;
             }
-
-            _logger.LogInformation("Order created successfully: {OrderId} for account: {AccountId}", 
-                orderId, accountId);
-
-            return orderId;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating order for user {UserId}", userId);
+                throw;
+            }
         }
+
 
         public async Task<bool> UpdateOrderStatusAsync(string orderId, int status)
         {
@@ -137,18 +129,18 @@ namespace EcommerceFashionWebsite.Services
         public async Task<List<OrderDto>> GetAllOrdersAsync()
         {
             var orders = await _orderRepository.GetAllOrdersAsync();
-            
+
             var orderDtos = new List<OrderDto>();
             foreach (var order in orders)
             {
                 var totalPrice = await _orderRepository.GetTotalPriceOrderDetailAsync(order.Id);
-                
+
                 orderDtos.Add(new OrderDto
                 {
                     Id = order.Id,
                     Fullname = order.Account?.Fullname ?? string.Empty,
-                     DateBuy = order.DateBuy ?? DateTime.Now,
-                     DateArrival = order.DateArrival ?? DateTime.Now,
+                    DateBuy = order.DateBuy ?? DateTime.Now,
+                    DateArrival = order.DateArrival ?? DateTime.Now,
                     Address = order.Address,
                     NumberPhone = order.NumberPhone,
                     Status = order.Status,
@@ -168,6 +160,23 @@ namespace EcommerceFashionWebsite.Services
         public async Task<int> GetRevenueByCategoryAsync(int categoryId, DateTime fromDate)
         {
             return await _orderRepository.GetRevenueByCategoryAsync(categoryId, fromDate);
+        }
+
+        private async Task<string> GenerateUniqueOrderIdAsync()
+        {
+            string orderId;
+            bool exists;
+
+            do
+            {
+                var timestamp = DateTime.Now.ToString("yyMMddHHmmss");
+                var random = new Random().Next(100, 999);
+                orderId = $"OR{timestamp}{random}";
+
+                exists = await _orderRepository.OrderExistsAsync(orderId);
+            } while (exists);
+
+            return orderId;
         }
     }
 }

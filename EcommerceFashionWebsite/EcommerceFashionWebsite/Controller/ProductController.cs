@@ -254,16 +254,17 @@ public class ProductController : ControllerBase
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 return Unauthorized(new { error = "User not authenticated" });
 
-            var result = await _productService.AddProductRatingAsync(dto.ProductId, userId, dto.Rating);
+            var result = await _productService.AddOrUpdateProductRatingAsync(dto.ProductId, userId, dto.Rating);
 
-            if (result)
+            if (!result)
             {
-                _logger.LogInformation("Product rated: ProductId={ProductId}, UserId={UserId}, Rating={Rating}",
-                    dto.ProductId, userId, dto.Rating);
-                return Ok(new { success = true, message = "Rating added successfully" });
+                return BadRequest(new { error = "You must purchase this product before rating it" });
             }
 
-            return StatusCode(500, new { error = "Failed to add rating" });
+            _logger.LogInformation("Product rated: ProductId={ProductId}, UserId={UserId}, Rating={Rating}",
+                dto.ProductId, userId, dto.Rating);
+        
+            return Ok(new { success = true, message = "Rating added successfully" });
         }
         catch (Exception ex)
         {
@@ -326,6 +327,28 @@ public class ProductController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving all products");
             return StatusCode(500, new { error = "An error occurred while retrieving products" });
+        }
+    }
+    
+    [HttpGet("{id}/rating")]
+    public async Task<ActionResult<ProductRatingInfoDto>> GetProductRating(string id)
+    {
+        try
+        {
+            int? userId = null;
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int uid))
+            {
+                userId = uid;
+            }
+
+            var ratingInfo = await _productService.GetProductRatingInfoAsync(id, userId);
+            return Ok(ratingInfo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving product rating {ProductId}", id);
+            return StatusCode(500, new { error = "An error occurred while retrieving rating" });
         }
     }
 }

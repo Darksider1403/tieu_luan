@@ -31,32 +31,32 @@ namespace EcommerceFashionWebsite.Controller
             }
         }
 
-        [HttpGet("districts/{provinceCode}")]
-        public async Task<ActionResult> GetDistricts(int provinceCode)
+        [HttpGet("districts/{provinceId}")]
+        public async Task<ActionResult> GetDistricts(string provinceId)
         {
             try
             {
-                var districts = await _addressService.GetDistrictsAsync(provinceCode);
+                var districts = await _addressService.GetDistrictsAsync(provinceId);
                 return Ok(districts);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting districts");
+                _logger.LogError(ex, "Error getting districts for province {ProvinceId}", provinceId);
                 return StatusCode(500, new { error = "Failed to get districts" });
             }
         }
 
-        [HttpGet("wards/{districtCode}")]
-        public async Task<ActionResult> GetWards(int districtCode)
+        [HttpGet("wards/{districtId}")]
+        public async Task<ActionResult> GetWards(string districtId)
         {
             try
             {
-                var wards = await _addressService.GetWardsAsync(districtCode);
+                var wards = await _addressService.GetWardsAsync(districtId);
                 return Ok(wards);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting wards");
+                _logger.LogError(ex, "Error getting wards for district {DistrictId}", districtId);
                 return StatusCode(500, new { error = "Failed to get wards" });
             }
         }

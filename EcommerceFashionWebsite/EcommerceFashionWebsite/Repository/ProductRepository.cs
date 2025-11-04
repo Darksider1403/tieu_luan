@@ -8,10 +8,12 @@ namespace EcommerceFashionWebsite.Repository;
 public class ProductRepository : IProductRepository
 {
     private readonly ApplicationDbContext _context;
+    private readonly ILogger<ProductRepository> _logger;
 
-    public ProductRepository(ApplicationDbContext context)
+    public ProductRepository(ApplicationDbContext context, ILogger<ProductRepository> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<List<Product>> GetAllProductsAsync()
@@ -282,12 +284,25 @@ public class ProductRepository : IProductRepository
 
     public async Task<double> GetProductAverageRatingAsync(string productId)
     {
-        var average = await _context.ProductComments
-            .Where(pc => pc.ProductId == productId && pc.Status == 1 && pc.Rating > 0)
-            .AverageAsync(pc => (double?)pc.Rating);
+        try
+        {
+            var ratings = await _context.ProductRatings
+                .Where(r => r.ProductId == productId)
+                .Select(r => r.Rating)
+                .ToListAsync();
 
-        return average ?? 0.0;
+            if (!ratings.Any())
+                return 0;
+
+            return Math.Round(ratings.Average(), 1);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting average rating for product {ProductId}", productId);
+            return 0;
+        }
     }
+
 
     public async Task<int> GetOrCreateProductRatingAsync(string productId, int accountId, int rating)
     {
@@ -322,5 +337,140 @@ public class ProductRepository : IProductRepository
     {
         return await _context.ProductComments
             .AnyAsync(pc => pc.ProductId == productId && pc.AccountId == accountId);
+    }
+
+    public async Task<int> GetProductTotalRatingsAsync(string productId)
+    {
+        try
+        {
+            return await _context.ProductRatings
+                .Where(r => r.ProductId == productId)
+                .CountAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting total ratings for product {ProductId}", productId);
+            return 0;
+        }
+    }
+
+    public async Task<Dictionary<int, int>> GetProductRatingDistributionAsync(string productId)
+    {
+        try
+        {
+            var distribution = await _context.ProductRatings
+                .Where(r => r.ProductId == productId)
+                .GroupBy(r => r.Rating)
+                .Select(g => new { Rating = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Rating, x => x.Count);
+
+            // Fill in missing ratings with 0
+            for (int i = 1; i <= 5; i++)
+            {
+                if (!distribution.ContainsKey(i))
+                    distribution[i] = 0;
+            }
+
+            return distribution;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting rating distribution for product {ProductId}", productId);
+            return new Dictionary<int, int>();
+        }
+    }
+
+    public async Task<int?> GetUserRatingAsync(string productId, int userId)
+    {
+        try
+        {
+            var rating = await _context.ProductRatings
+                .Where(r => r.ProductId == productId && r.UserId == userId)
+                .Select(r => r.Rating)
+                .FirstOrDefaultAsync();
+
+            return rating == 0 ? null : (int?)rating;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting user rating for product {ProductId}, user {UserId}",
+                productId, userId);
+            return null;
+        }
+    }
+
+    public async Task<bool> HasUserRatedAsync(string productId, int userId)
+    {
+        try
+        {
+            return await _context.ProductRatings
+                .AnyAsync(r => r.ProductId == productId && r.UserId == userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking if user rated product {ProductId}", productId);
+            return false;
+        }
+    }
+
+    public async Task<int> AddOrUpdateProductRatingAsync(string productId, int userId, int rating)
+    {
+        try
+        {
+            var existingRating = await _context.ProductRatings
+                .FirstOrDefaultAsync(r => r.ProductId == productId && r.UserId == userId);
+
+            if (existingRating != null)
+            {
+                existingRating.Rating = rating;
+                _context.ProductRatings.Update(existingRating);
+            }
+            else
+            {
+                var newRating = new ProductRating
+                {
+                    ProductId = productId,
+                    UserId = userId,
+                    Rating = rating
+                };
+                await _context.ProductRatings.AddAsync(newRating);
+            }
+
+            return await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding/updating rating for product {ProductId}", productId);
+            return 0;
+        }
+    }
+
+    public async Task<bool> HasUserPurchasedProductAsync(string productId, int userId)
+    {
+        try
+        {
+            // Check if user has any completed order containing this product
+            // Using Cart as OrderDetails with IdOrder relationship
+            var hasPurchased = await _context.Orders
+                .Where(o => o.IdAccount == userId && o.Status >= 3) // Status 3 or higher means delivered/completed
+                .Join(
+                    _context.Carts.Where(c => c.IdOrder != null), // Only carts that are part of an order
+                    order => order.Id,
+                    cart => cart.IdOrder,
+                    (order, cart) => new { order, cart }
+                )
+                .AnyAsync(x => x.cart.IdProduct == productId);
+
+            _logger.LogInformation(
+                "HasUserPurchasedProduct: UserId={UserId}, ProductId={ProductId}, Result={Result}",
+                userId, productId, hasPurchased);
+
+            return hasPurchased;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking if user purchased product {ProductId}", productId);
+            return false;
+        }
     }
 }

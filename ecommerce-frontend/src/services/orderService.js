@@ -1,10 +1,18 @@
 import apiClient from "./apiService";
 
 export const orderService = {
-  // Create a new order
-  createOrder: async (orderData) => {
+  async createOrder(orderData) {
     try {
-      const response = await apiClient.post("/order", orderData);
+      const response = await apiClient.post("/order", {
+        address: `${orderData.address}, ${orderData.ward}, ${orderData.district}, ${orderData.city}`,
+        phone: orderData.phone,
+        email: orderData.email,
+        fullName: orderData.fullName,
+        notes: orderData.notes,
+        paymentMethod: orderData.paymentMethod,
+        totalAmount: orderData.totalAmount,
+        shippingFee: orderData.shippingFee,
+      });
       return response.data;
     } catch (error) {
       console.error("Error creating order:", error);
@@ -12,44 +20,42 @@ export const orderService = {
     }
   },
 
-  createPayment: async (paymentData) => {
+  async createPayment(paymentRequest) {
     try {
-      const response = await apiClient.post("/payment/vnpay", paymentData);
+      const response = await apiClient.post("/payment/vnpay", paymentRequest);
       return response.data;
     } catch (error) {
-      console.error("Error creating payment:", error);
+      console.error("Error creating VNPay payment:", error);
       throw error;
     }
   },
 
-  createMoMoPayment: async (paymentData) => {
+  async createMoMoPayment(paymentRequest) {
     try {
-      const response = await apiClient.post("/payment/momo", paymentData);
+      const response = await apiClient.post("/payment/momo", paymentRequest);
       return response.data;
     } catch (error) {
       console.error("Error creating MoMo payment:", error);
       throw error;
     }
   },
-
-  // Get user's orders
-  getOrders: async () => {
+  async getUserOrders() {
     try {
-      const response = await apiClient.get("/order/my-orders");
+      const response = await apiClient.get("/order");
       return response.data;
     } catch (error) {
-      console.error("Error fetching orders:", error);
+      console.error("Error getting user orders:", error);
       throw error;
     }
   },
 
   // Get single order details
-  getOrderById: async (orderId) => {
+  async getOrderById(orderId) {
     try {
       const response = await apiClient.get(`/order/${orderId}`);
       return response.data;
     } catch (error) {
-      console.error("Error fetching order:", error);
+      console.error("Error getting order:", error);
       throw error;
     }
   },

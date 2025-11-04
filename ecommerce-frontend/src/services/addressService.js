@@ -1,54 +1,40 @@
-import axios from "axios";
+import apiClient from "./apiService";
 
-const PROVINCE_API_URL = "https://provinces.open-api.vn/api";
+const API_BASE_URL = "/address";
 
 export const addressService = {
-  // Get all provinces
-  getProvinces: async () => {
+  async getProvinces() {
     try {
-      const response = await axios.get(`${PROVINCE_API_URL}/p/`);
-      return response.data;
+      const response = await apiClient.get(`${API_BASE_URL}/provinces`);
+      return response.data || [];
     } catch (error) {
       console.error("Error fetching provinces:", error);
       return [];
     }
   },
 
-  // Get districts by province code
-  getDistricts: async (provinceCode) => {
+  async getDistricts(provinceId) {
     try {
-      const response = await axios.get(
-        `${PROVINCE_API_URL}/p/${provinceCode}?depth=2`
+      if (!provinceId) return [];
+      const response = await apiClient.get(
+        `${API_BASE_URL}/districts/${provinceId}`
       );
-      return response.data.districts || [];
+      return response.data || [];
     } catch (error) {
       console.error("Error fetching districts:", error);
       return [];
     }
   },
 
-  // Get wards by district code
-  getWards: async (districtCode) => {
+  async getWards(districtId) {
     try {
-      const response = await axios.get(
-        `${PROVINCE_API_URL}/d/${districtCode}?depth=2`
+      if (!districtId) return [];
+      const response = await apiClient.get(
+        `${API_BASE_URL}/wards/${districtId}`
       );
-      return response.data.wards || [];
+      return response.data || [];
     } catch (error) {
       console.error("Error fetching wards:", error);
-      return [];
-    }
-  },
-
-  // Search provinces by keyword
-  searchProvinces: async (keyword) => {
-    try {
-      const response = await axios.get(
-        `${PROVINCE_API_URL}/p/search/?q=${encodeURIComponent(keyword)}`
-      );
-      return response.data;
-    } catch (error) {
-      console.error("Error searching provinces:", error);
       return [];
     }
   },

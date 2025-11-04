@@ -17,10 +17,23 @@ export default function Cart() {
   const fetchCartItems = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await cartService.getCartItems();
-      setCartItems(data);
+
+      if (Array.isArray(data)) {
+        setCartItems(data);
+      } else {
+        setCartItems([]);
+        setError("Vui lòng đăng nhập để xem giỏ hàng");
+      }
     } catch (err) {
-      setError("Failed to fetch cart items");
+      console.error("Error fetching cart:", err);
+      if (err.response?.status === 401) {
+        setError("Vui lòng đăng nhập để xem giỏ hàng");
+      } else {
+        setError("Không thể tải giỏ hàng. Vui lòng thử lại.");
+      }
+      setCartItems([]);
     } finally {
       setLoading(false);
     }

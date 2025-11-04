@@ -40,5 +40,12 @@ namespace EcommerceFashionWebsite.Repository
         Task<double> GetProductAverageRatingAsync(string productId);
         Task<int> GetOrCreateProductRatingAsync(string productId, int accountId, int rating);
         Task<bool> HasUserCommentedAsync(string productId, int accountId);
+        
+        Task<int> GetProductTotalRatingsAsync(string productId);
+        Task<Dictionary<int, int>> GetProductRatingDistributionAsync(string productId);
+        Task<int?> GetUserRatingAsync(string productId, int userId);
+        Task<bool> HasUserRatedAsync(string productId, int userId);
+        Task<int> AddOrUpdateProductRatingAsync(string productId, int userId, int rating);
+        Task<bool> HasUserPurchasedProductAsync(string productId, int userId);
     }
 }
