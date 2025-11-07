@@ -1,2 +1,5 @@
-EcommerceFashionWebsite/EcommerceFashionWebsite/appsettings.json
-EcommerceFashionWebsite/EcommerceFashionWebsite/bin/Debug/net9.0/appsettings.json
+# appsettings - hide credentials
+**/appsettings.json
+**/appsettings.*.json
+!appsettings.example.json
+!appsettings.Development.json.example
