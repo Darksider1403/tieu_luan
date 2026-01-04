@@ -59,12 +59,72 @@ public class ProductRepository : IProductRepository
             .ToListAsync();
     }
 
-    public async Task<List<Product>> SearchProductsAsync(string searchTerm)
-    {
-        return await _context.Products
-            .Where(p => p.Name.Contains(searchTerm) && p.Status == 1)
-            .ToListAsync();
-    }
+        public async Task<List<Product>> SearchProductsAsync(string query)
+        {
+            try
+            {
+                _logger.LogInformation("Repository search: '{Query}'", query ?? "NULL");
+
+                var productsQuery = _context.Products
+                    .AsNoTracking()
+                    .Where(p => p.Status == 1); 
+
+                // If query is empty or null, return newest products
+                if (string.IsNullOrWhiteSpace(query))
+                {
+                    var allProducts = await productsQuery
+                        .OrderByDescending(p => p.Id) // Newest first
+                        .Take(20)
+                        .ToListAsync();
+
+                    _logger.LogInformation("Empty query - returning {Count} newest products", allProducts.Count);
+                    return allProducts;
+                }
+
+                var lowerQuery = query.ToLower().Trim();
+                _logger.LogInformation("Searching with normalized query: '{Query}'", lowerQuery);
+
+                // Search in name, description, color
+                var searchResults = await productsQuery
+                    .Where(p =>
+                        p.Name.ToLower().Contains(lowerQuery) ||
+                        (p.Color != null && p.Color.ToLower().Contains(lowerQuery)) ||
+                        (p.Size != null && p.Size.ToLower().Contains(lowerQuery))
+                    )
+                    .OrderByDescending(p => p.Id)
+                    .Take(20)
+                    .ToListAsync();
+
+                _logger.LogInformation("Search found {Count} products", searchResults.Count);
+
+                // If no results with exact match, try more flexible search
+                if (!searchResults.Any())
+                {
+                    _logger.LogInformation("No exact matches, trying flexible search");
+
+                    // Split query into words
+                    var words = lowerQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                    searchResults = await productsQuery
+                        .Where(p => words.Any(word =>
+                            p.Name.ToLower().Contains(word) ||
+                            (p.Color != null && p.Color.ToLower().Contains(word))
+                        ))
+                        .OrderByDescending(p => p.Id)
+                        .Take(20)
+                        .ToListAsync();
+
+                    _logger.LogInformation("Flexible search found {Count} products", searchResults.Count);
+                }
+
+                return searchResults;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Repository search error");
+                return new List<Product>();
+            }
+        }
 
     public async Task<List<Product>> GetProductsWithPaginationAsync(int pageSize, int offset, int? categoryId = null)
     {
@@ -245,23 +305,11 @@ public class ProductRepository : IProductRepository
         return await _context.Sliders.ToListAsync();
     }
 
-    public async Task<List<ProductComment>> GetProductCommentsAsync(string productId)
+    public Task<int> AddProductCommentAsync(ProductComment comment)
     {
-        return await _context.ProductComments
-            .Include(pc => pc.Account)
-            .Where(pc => pc.ProductId == productId && pc.Status == 1)
-            .OrderByDescending(pc => pc.DateComment)
-            .ToListAsync();
+        throw new NotImplementedException();
     }
 
-    public async Task<int> AddProductCommentAsync(ProductComment comment)
-    {
-        comment.DateComment = DateTime.Now;
-        comment.Status = 1; // Auto-approve
-
-        _context.ProductComments.Add(comment);
-        return await _context.SaveChangesAsync();
-    }
 
     public async Task<int> UpdateProductCommentAsync(ProductComment comment)
     {
@@ -286,57 +334,45 @@ public class ProductRepository : IProductRepository
     {
         try
         {
-            var ratings = await _context.ProductRatings
-                .Where(r => r.ProductId == productId)
-                .Select(r => r.Rating)
-                .ToListAsync();
+            var avgRating = await _context.ProductRatings
+                .Where(pr => pr.ProductId == productId)
+                .AverageAsync(pr => (double?)pr.Rating);
 
-            if (!ratings.Any())
-                return 0;
-
-            return Math.Round(ratings.Average(), 1);
+            return avgRating ?? 0.0;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting average rating for product {ProductId}", productId);
-            return 0;
+            return 0.0;
         }
     }
-
 
     public async Task<int> GetOrCreateProductRatingAsync(string productId, int accountId, int rating)
     {
         var existingComment = await _context.ProductComments
-            .FirstOrDefaultAsync(pc => pc.ProductId == productId && pc.AccountId == accountId);
+            .FirstOrDefaultAsync(pc => pc.ProductId == productId);
 
         if (existingComment != null)
         {
-            existingComment.Rating = rating;
-            existingComment.DateComment = DateTime.Now;
+          
             _context.ProductComments.Update(existingComment);
         }
         else
         {
-            var newComment = new ProductComment
-            {
-                ProductId = productId,
-                AccountId = accountId,
-                Rating = rating,
-                Content = string.Empty,
-                DateComment = DateTime.Now,
-                Status = 1
-            };
+            // var newComment = new ProductComment
+            // {
+            //     ProductId = productId,
+            //     AccountId = accountId,
+            //     Rating = rating,
+            //     Content = string.Empty,
+            //     DateComment = DateTime.Now,
+            //     Status = 1
+            // };
 
-            _context.ProductComments.Add(newComment);
+            // _context.ProductComments.Add(newComment);
         }
 
         return await _context.SaveChangesAsync();
-    }
-
-    public async Task<bool> HasUserCommentedAsync(string productId, int accountId)
-    {
-        return await _context.ProductComments
-            .AnyAsync(pc => pc.ProductId == productId && pc.AccountId == accountId);
     }
 
     public async Task<int> GetProductTotalRatingsAsync(string productId)
@@ -344,7 +380,7 @@ public class ProductRepository : IProductRepository
         try
         {
             return await _context.ProductRatings
-                .Where(r => r.ProductId == productId)
+                .Where(pr => pr.ProductId == productId)
                 .CountAsync();
         }
         catch (Exception ex)
@@ -359,24 +395,24 @@ public class ProductRepository : IProductRepository
         try
         {
             var distribution = await _context.ProductRatings
-                .Where(r => r.ProductId == productId)
-                .GroupBy(r => r.Rating)
+                .Where(pr => pr.ProductId == productId)
+                .GroupBy(pr => pr.Rating)
                 .Select(g => new { Rating = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Rating, x => x.Count);
 
-            // Fill in missing ratings with 0
+            // Ensure all ratings 1-5 are present
+            var result = new Dictionary<int, int>();
             for (int i = 1; i <= 5; i++)
             {
-                if (!distribution.ContainsKey(i))
-                    distribution[i] = 0;
+                result[i] = distribution.ContainsKey(i) ? distribution[i] : 0;
             }
 
-            return distribution;
+            return result;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting rating distribution for product {ProductId}", productId);
-            return new Dictionary<int, int>();
+            return new Dictionary<int, int> { { 1, 0 }, { 2, 0 }, { 3, 0 }, { 4, 0 }, { 5, 0 } };
         }
     }
 
@@ -385,16 +421,16 @@ public class ProductRepository : IProductRepository
         try
         {
             var rating = await _context.ProductRatings
-                .Where(r => r.ProductId == productId && r.UserId == userId)
-                .Select(r => r.Rating)
+                .Where(pr => pr.ProductId == productId && pr.AccountId == userId)
+                .Select(pr => (int?)pr.Rating)
                 .FirstOrDefaultAsync();
 
-            return rating == 0 ? null : (int?)rating;
+            return rating;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting user rating for product {ProductId}, user {UserId}",
-                productId, userId);
+            _logger.LogError(ex, "Error getting user rating for user {UserId} and product {ProductId}",
+                userId, productId);
             return null;
         }
     }
@@ -404,11 +440,11 @@ public class ProductRepository : IProductRepository
         try
         {
             return await _context.ProductRatings
-                .AnyAsync(r => r.ProductId == productId && r.UserId == userId);
+                .AnyAsync(pr => pr.ProductId == productId && pr.AccountId == userId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if user rated product {ProductId}", productId);
+            _logger.LogError(ex, "Error checking if user has rated");
             return false;
         }
     }
@@ -418,22 +454,32 @@ public class ProductRepository : IProductRepository
         try
         {
             var existingRating = await _context.ProductRatings
-                .FirstOrDefaultAsync(r => r.ProductId == productId && r.UserId == userId);
+                .FirstOrDefaultAsync(pr => pr.ProductId == productId && pr.AccountId == userId);
 
             if (existingRating != null)
             {
+                // Update existing rating
                 existingRating.Rating = rating;
+                existingRating.DateRating = DateTime.Now;
                 _context.ProductRatings.Update(existingRating);
+
+                _logger.LogInformation("Updated rating for user {UserId} on product {ProductId} to {Rating}",
+                    userId, productId, rating);
             }
             else
             {
+                // Add new rating
                 var newRating = new ProductRating
                 {
                     ProductId = productId,
-                    UserId = userId,
-                    Rating = rating
+                    AccountId = userId,
+                    Rating = rating,
+                    DateRating = DateTime.Now
                 };
                 await _context.ProductRatings.AddAsync(newRating);
+
+                _logger.LogInformation("Added new rating for user {UserId} on product {ProductId}: {Rating}",
+                    userId, productId, rating);
             }
 
             return await _context.SaveChangesAsync();
@@ -441,7 +487,7 @@ public class ProductRepository : IProductRepository
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error adding/updating rating for product {ProductId}", productId);
-            return 0;
+            throw;
         }
     }
 
@@ -449,21 +495,19 @@ public class ProductRepository : IProductRepository
     {
         try
         {
-            // Check if user has any completed order containing this product
-            // Using Cart as OrderDetails with IdOrder relationship
+            // Check if user has purchased and RECEIVED the product
             var hasPurchased = await _context.Orders
-                .Where(o => o.IdAccount == userId && o.Status >= 3) // Status 3 or higher means delivered/completed
-                .Join(
-                    _context.Carts.Where(c => c.IdOrder != null), // Only carts that are part of an order
-                    order => order.Id,
-                    cart => cart.IdOrder,
-                    (order, cart) => new { order, cart }
-                )
-                .AnyAsync(x => x.cart.IdProduct == productId);
+                .Where(o => o.IdAccount == userId
+                            && o.IsVerified == true     // ✅ BOOL comparison (hoặc chỉ: o.IsVerified)
+                            && o.Status >= 3            // ✅ Must be delivered (3 = Đã giao, 4 = Hoàn thành)
+                            && o.Status != 5            // Exclude cancelled orders
+                            && o.Status != 6)           // Exclude refunded orders
+                .SelectMany(o => o.OrderDetail)
+                .AnyAsync(od => od.IdProduct == productId);
 
             _logger.LogInformation(
-                "HasUserPurchasedProduct: UserId={UserId}, ProductId={ProductId}, Result={Result}",
-                userId, productId, hasPurchased);
+                "Purchase check for user {UserId} and product {ProductId}: {HasPurchased} (IsVerified={IsVerified}, Status={Status})",
+                userId, productId, hasPurchased, "checked", ">=3");
 
             return hasPurchased;
         }

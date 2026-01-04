@@ -44,19 +44,26 @@ namespace EcommerceFashionWebsite.Services
         {
             var products = await _productRepository.GetProductsByCategoryAsync(categoryId, limit);
             var thumbnails = await _productRepository.GetThumbnailImagesAsync();
-
+    
             var productDtos = new List<ProductDto>();
+    
             foreach (var product in products)
             {
                 var dto = await MapToDtoAsync(product);
+        
                 if (thumbnails.TryGetValue(product.Id, out var thumbnail))
                 {
                     dto.ThumbnailImage = thumbnail;
                 }
-
+        
+                // ADD THIS: Get rating info for each product
+                var ratingInfo = await GetProductRatingInfoAsync(product.Id, null);
+                dto.AverageRating = ratingInfo.AverageRating;
+                dto.TotalRatings = ratingInfo.TotalRatings;
+        
                 productDtos.Add(dto);
             }
-
+    
             return productDtos;
         }
 
@@ -235,30 +242,6 @@ namespace EcommerceFashionWebsite.Services
             return await _productRepository.GetProductImagesAsync(productId);
         }
 
-        public async Task<List<ProductCommentDto>> GetProductCommentsAsync(string productId)
-        {
-            try
-            {
-                var comments = await _productRepository.GetProductCommentsAsync(productId);
-        
-                var commentDtos = comments.Select(c => new ProductCommentDto
-                {
-                    Username = c.Account?.Username ?? "Anonymous",
-                    Content = c.Content,
-                    Rating = c.Rating,
-                    DateComment = c.DateComment,
-                    Avatar = string.Empty
-                }).ToList();
-
-                return commentDtos;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting product comments for {ProductId}", productId);
-                return new List<ProductCommentDto>();
-            }
-        }
-
         public async Task<bool> AddProductRatingAsync(string productId, int accountId, int rating)
         {
             try
@@ -272,31 +255,6 @@ namespace EcommerceFashionWebsite.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding product rating");
-                return false;
-            }
-        }
-
-        public async Task<bool> AddProductCommentAsync(string productId, int accountId, string content)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(content))
-                    return false;
-
-                var comment = new ProductComment
-                {
-                    ProductId = productId,
-                    AccountId = accountId,
-                    Content = content.Trim(),
-                    Rating = 0
-                };
-
-                var result = await _productRepository.AddProductCommentAsync(comment);
-                return result > 0;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error adding product comment");
                 return false;
             }
         }
@@ -343,59 +301,59 @@ namespace EcommerceFashionWebsite.Services
                 var hasPurchased = await _productRepository.HasUserPurchasedProductAsync(productId, userId);
                 if (!hasPurchased)
                 {
-                    _logger.LogWarning("User {UserId} tried to rate product {ProductId} without purchasing", 
+                    _logger.LogWarning("User {UserId} attempted to rate product {ProductId} without purchasing", 
                         userId, productId);
                     return false;
                 }
 
-                // Validate rating
-                if (rating < 1 || rating > 5)
-                {
-                    _logger.LogWarning("Invalid rating value: {Rating}", rating);
-                    return false;
-                }
-
-                var result = await _productRepository.AddOrUpdateProductRatingAsync(productId, userId, rating);
-                return result > 0;
+                // Add or update the rating
+                await _productRepository.AddOrUpdateProductRatingAsync(productId, userId, rating);
+        
+                _logger.LogInformation("User {UserId} rated product {ProductId} with {Rating} stars", 
+                    userId, productId, rating);
+        
+                return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding/updating product rating");
-                return false;
+                throw;
             }
         }
 
-        public async Task<ProductRatingInfoDto> GetProductRatingInfoAsync(string productId, int? userId = null)
+        public async Task<ProductRatingInfoDto> GetProductRatingInfoAsync(string productId, int? userId)
         {
             try
             {
                 var averageRating = await _productRepository.GetProductAverageRatingAsync(productId);
                 var totalRatings = await _productRepository.GetProductTotalRatingsAsync(productId);
-                var distribution = await _productRepository.GetProductRatingDistributionAsync(productId);
+                var ratingDistribution = await _productRepository.GetProductRatingDistributionAsync(productId);
 
-                var result = new ProductRatingInfoDto
-                {
-                    AverageRating = averageRating,
-                    TotalRatings = totalRatings,
-                    RatingDistribution = distribution,
-                    CanUserRate = false,
-                    HasUserRated = false,
-                    UserRating = null
-                };
+                int? userRating = null;
+                bool hasUserRated = false;
+                bool canUserRate = false;
 
                 if (userId.HasValue)
                 {
-                    result.HasUserRated = await _productRepository.HasUserRatedAsync(productId, userId.Value);
-                    result.UserRating = await _productRepository.GetUserRatingAsync(productId, userId.Value);
-                    result.CanUserRate = await _productRepository.HasUserPurchasedProductAsync(productId, userId.Value);
+                    userRating = await _productRepository.GetUserRatingAsync(productId, userId.Value);
+                    hasUserRated = await _productRepository.HasUserRatedAsync(productId, userId.Value);
+                    canUserRate = await _productRepository.HasUserPurchasedProductAsync(productId, userId.Value);
                 }
 
-                return result;
+                return new ProductRatingInfoDto
+                {
+                    AverageRating = averageRating,
+                    TotalRatings = totalRatings,
+                    RatingDistribution = ratingDistribution,
+                    UserRating = userRating,
+                    HasUserRated = hasUserRated,
+                    CanUserRate = canUserRate
+                };
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting product rating info for {ProductId}", productId);
-                return new ProductRatingInfoDto();
+                throw;
             }
         }
 

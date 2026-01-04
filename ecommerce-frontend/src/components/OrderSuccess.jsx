@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { CheckCircle, Package, MapPin, CreditCard } from "lucide-react";
 import { orderService } from "../services/orderService";
@@ -9,22 +9,31 @@ function OrderSuccess() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (orderId) {
-      fetchOrderDetails();
-    }
-  }, [orderId]);
-
-  const fetchOrderDetails = async () => {
+  const fetchOrderDetails = useCallback(async () => {
     try {
       const data = await orderService.getOrderById(orderId);
+      // Calculate total from order details if not provided by backend
+      if (data.orderDetails && !data.totalAmount) {
+        const subtotal = data.orderDetails.reduce(
+          (sum, item) => sum + item.price * item.quantity,
+          0
+        );
+        // Add shipping fee (30,000đ)
+        data.totalAmount = subtotal + 30000;
+      }
       setOrder(data);
     } catch (error) {
       console.error("Error fetching order:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId]);
+
+  useEffect(() => {
+    if (orderId) {
+      fetchOrderDetails();
+    }
+  }, [orderId, fetchOrderDetails]);
 
   if (loading) {
     return (
@@ -63,8 +72,13 @@ function OrderSuccess() {
                 <div>
                   <p className="text-sm text-gray-500">Địa chỉ giao hàng</p>
                   <p className="font-medium text-gray-900">
-                    {order.address}, {order.ward}, {order.district},{" "}
-                    {order.city}
+                    {order.address
+                      ? order.address
+                          .split(",")
+                          .map((part) => part.trim())
+                          .filter((part) => part)
+                          .join(", ")
+                      : "Không có địa chỉ"}
                   </p>
                 </div>
               </div>
@@ -76,16 +90,41 @@ function OrderSuccess() {
                     Phương thức thanh toán
                   </p>
                   <p className="font-medium text-gray-900">
-                    {order.paymentMethod === "COD"
+                    {order.paymentMethod === "COD" ||
+                    order.paymentMethod === "Tiền mặt"
                       ? "Thanh toán khi nhận hàng"
-                      : "Chuyển khoản ngân hàng"}
+                      : order.paymentMethod === "Bank Transfer" ||
+                        order.paymentMethod === "Chuyển khoản"
+                      ? "Chuyển khoản ngân hàng"
+                      : order.paymentMethod || "Chưa xác định"}
                   </p>
                 </div>
               </div>
 
-              <div className="border-t border-gray-200 pt-4">
+              <div className="border-t border-gray-200 pt-4 space-y-2">
+                {order.orderDetails && (
+                  <>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Tiền hàng:</span>
+                      <span>
+                        {order.orderDetails
+                          .reduce(
+                            (sum, item) => sum + item.price * item.quantity,
+                            0
+                          )
+                          .toLocaleString("vi-VN")}
+                        đ
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Phí vận chuyển:</span>
+                      <span>30,000đ</span>
+                    </div>
+                    <div className="border-t border-gray-200 pt-2"></div>
+                  </>
+                )}
                 <div className="flex justify-between text-lg font-bold">
-                  <span>Tổng tiền:</span>
+                  <span>Tổng cộng:</span>
                   <span className="text-purple-600">
                     {order.totalAmount?.toLocaleString("vi-VN")}đ
                   </span>

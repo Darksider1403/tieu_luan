@@ -7,9 +7,12 @@ import Register from "./components/Register";
 import EmailVerification from "./components/EmailVerification";
 import ForgotPassword from "./components/ForgotPassword";
 import ProductDetail from "./components/ProductDetail";
+import Products from "./components/Products";
 import Cart from "./components/Cart";
 import { AuthProvider } from "./components/AuthContext";
 import UserPage from "./components/UserPage";
+import UserSettings from "./components/UserSettings";
+import Wishlist from "./components/Wishlist";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./components/admin/AdminDashboard";
@@ -19,7 +22,9 @@ import AdminUsers from "./components/admin/AdminUsers";
 import AdminSettings from "./components/admin/AdminSettings";
 import Checkout from "./components/Checkout";
 import OrderSuccess from "./components/OrderSuccess";
+import Orders from "./components/Orders";
 import PaymentReturn from "./components/PaymentReturn";
+import Chatbot from "./components/chat/ChatBot";
 
 function App() {
   const user = null;
@@ -58,13 +63,40 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<EmailVerification />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <Orders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <UserSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wishlist"
+              element={
+                <ProtectedRoute>
+                  <Wishlist />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/order-success/:orderId" element={<OrderSuccess />} />
             <Route path="/payment-return" element={<PaymentReturn />} />
           </Routes>
         </Layout>
+
+        <Chatbot />
       </AuthProvider>
     </BrowserRouter>
   );

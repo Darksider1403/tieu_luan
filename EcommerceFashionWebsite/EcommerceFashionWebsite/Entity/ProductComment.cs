@@ -1,27 +1,56 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace EcommerceFashionWebsite.Entity;
-
-[Table("product_comments")]
-public class ProductComment
+namespace EcommerceFashionWebsite.Entity
 {
-    [Key] [Column("id")] public int Id { get; set; }
+    [Table("product_comments")]
+    public class ProductComment
+    {
+        [Key]
+        [Column("id")]
+        public int Id { get; set; }
 
-    [Column("productId")] public string ProductId { get; set; } = string.Empty;
+        [Column("product_id")]
+        [Required]
+        [MaxLength(50)]
+        public string ProductId { get; set; } = string.Empty;
 
-    [Column("accountId")] public int AccountId { get; set; }
+        [Column("user_id")]
+        [Required]
+        public int UserId { get; set; }
 
-    [Column("content")] public string Content { get; set; } = string.Empty;
+        [Column("comment")]
+        [Required]
+        public string Comment { get; set; } = string.Empty;
 
-    [Column("rating")] public int Rating { get; set; }
+        [Column("parent_id")]
+        public int? ParentId { get; set; } // For replies
 
-    [Column("dateComment")] public DateTime DateComment { get; set; } = DateTime.Now;
+        [Column("is_verified_purchase")]
+        public bool IsVerifiedPurchase { get; set; } = false;
 
-    [Column("status")] public int Status { get; set; } = 1; // 1 = approved, 0 = pending
+        [Column("helpful_count")]
+        public int HelpfulCount { get; set; } = 0;
 
-    // Navigation properties
-    [NotMapped] public Product? Product { get; set; }
+        [Column("created_at")]
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-    [NotMapped] public Account? Account { get; set; }
+        [Column("updated_at")]
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+        [Column("status")]
+        public int Status { get; set; } = 1; // 0=deleted, 1=active, 2=pending
+
+        // Navigation properties
+        [ForeignKey("ProductId")]
+        public virtual Product? Product { get; set; }
+
+        [ForeignKey("UserId")]
+        public virtual Account? User { get; set; }
+
+        [ForeignKey("ParentId")]
+        public virtual ProductComment? ParentComment { get; set; }
+
+        public virtual ICollection<ProductComment> Replies { get; set; } = new List<ProductComment>();
+    }
 }

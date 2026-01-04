@@ -16,18 +16,25 @@ export const accountService = {
 
       return response.data;
     } catch (error) {
-      throw new Error(error.response?.data?.error || "Login failed");
+      // Log full error for debugging
+      console.error("Login error details:", error.response?.data);
+
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Login failed";
+
+      throw new Error(errorMessage);
     }
   },
 
   logout: async () => {
     try {
-      // Call logout endpoint (optional - can remove if you don't have one)
       try {
         await apiClient.post("/account/logout");
       } catch (error) {
         console.error("Logout API call failed:", error);
-        // Continue anyway
       }
 
       // Clear all local storage

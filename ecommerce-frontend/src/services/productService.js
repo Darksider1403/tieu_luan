@@ -138,6 +138,19 @@ export const productService = {
       return {};
     }
   },
+
+  rateProduct: async (productId, rating) => {
+    try {
+      const response = await apiClient.post("/product/rate", {
+        productId,
+        rating,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error rating product:", error);
+      throw error;
+    }
+  },
 };
 
 export const cartService = {

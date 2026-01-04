@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Search,
-  Filter,
   Download,
   Plus,
   Edit2,
@@ -57,6 +56,11 @@ function AdminProducts() {
 
   // Get product image URL
   const getProductImage = (product) => {
+    // If product has thumbnailImage property (used by ProductCard)
+    if (product.thumbnailImage) {
+      return product.thumbnailImage;
+    }
+
     // If product has imageUrl property
     if (product.imageUrl) {
       return product.imageUrl;
@@ -379,7 +383,10 @@ function AdminProducts() {
                       {/* Price */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900 font-semibold">
-                          ${parseFloat(product.price).toFixed(2)}
+                          {new Intl.NumberFormat("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                          }).format(product.price)}
                         </div>
                       </td>
 

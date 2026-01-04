@@ -7,9 +7,20 @@ using EcommerceFashionWebsite.Services;
 using EcommerceFashionWebsite.Services.Interface;
 using EcommerceFashionWebsite.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.IdentityModel.Tokens;
+using Polly;
+using Polly.Extensions.Http;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var retryPolicy = HttpPolicyExtensions
+    .HandleTransientHttpError()
+    .Or<TimeoutException>()
+    .WaitAndRetryAsync(3, retryAttempt => 
+        TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+
+var timeoutPolicy = Policy.TimeoutAsync<HttpResponseMessage>(30);
 
 // Add services to the container
 builder.Services.AddControllers();
@@ -98,11 +109,32 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IProductCommentRepository, ProductCommentRepository>();
+builder.Services.AddScoped<IProductCommentService, ProductCommentService>();
+
 
 // Connect payment gateway
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IPaymentService, VNPayService>();
 builder.Services.AddScoped<MoMoService>();
+
+// ===== CRITICAL: REGISTER AI CHATBOT SERVICE =====
+builder.Services.AddHttpClient<IAIChatbotService, AIChatbotService>()
+    .ConfigureHttpClient(client =>
+    {
+        client.Timeout = TimeSpan.FromSeconds(120); // 2 minutes
+    });
+builder.Services.AddScoped<IAIChatbotService, AIChatbotService>();
+builder.Services.Configure<KestrelServerOptions>(options =>
+{
+    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
+    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(2);
+});
+
+builder.Services.AddHttpClient("AzureOpenAI")
+    .AddPolicyHandler(retryPolicy)
+    .AddPolicyHandler(timeoutPolicy);
+
 
 var app = builder.Build();
 

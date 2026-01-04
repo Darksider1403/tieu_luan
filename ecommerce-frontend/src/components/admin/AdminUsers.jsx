@@ -27,7 +27,7 @@ function AdminUsers() {
     fullname: "",
     numberPhone: "",
     status: 1,
-    role: 0,
+    role: "User",
   });
 
   useEffect(() => {
@@ -59,7 +59,7 @@ function AdminUsers() {
       fullname: user.fullname || "",
       numberPhone: user.numberPhone || "",
       status: user.status,
-      role: user.role || 0,
+      role: user.role || "User",
     });
     setShowModal(true);
   };
@@ -72,7 +72,7 @@ function AdminUsers() {
       fullname: "",
       numberPhone: "",
       status: 1,
-      role: 0,
+      role: "User",
     });
     setShowModal(true);
   };
@@ -155,6 +155,12 @@ function AdminUsers() {
         type: "error",
       });
     }
+  };
+
+  // Helper to get role display value
+  const getRoleValue = (role) => {
+    if (role === "Admin" || role === 1) return "Admin";
+    return "User";
   };
 
   const filteredUsers = users.filter(
@@ -275,14 +281,14 @@ function AdminUsers() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <select
-                        value={user.role || 0}
+                        value={getRoleValue(user.role)}
                         onChange={(e) =>
-                          handleRoleChange(user.id, parseInt(e.target.value))
+                          handleRoleChange(user.id, e.target.value)
                         }
                         className="text-sm border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-purple-500"
                       >
-                        <option value={0}>User</option>
-                        <option value={1}>Admin</option>
+                        <option value="User">User</option>
+                        <option value="Admin">Admin</option>
                       </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -428,12 +434,12 @@ function AdminUsers() {
                 <select
                   value={formData.role}
                   onChange={(e) =>
-                    setFormData({ ...formData, role: parseInt(e.target.value) })
+                    setFormData({ ...formData, role: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
-                  <option value={0}>User</option>
-                  <option value={1}>Admin</option>
+                  <option value="User">User</option>
+                  <option value="Admin">Admin</option>
                 </select>
               </div>
 

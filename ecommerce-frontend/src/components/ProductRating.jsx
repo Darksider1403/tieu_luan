@@ -13,6 +13,9 @@ function ProductRating({ productId, onRatingUpdate }) {
     try {
       setLoading(true);
       const response = await apiClient.get(`/product/${productId}/rating`);
+      console.log("🔍 Rating API Response:", response.data);
+      console.log("✅ Can user rate?", response.data.canUserRate);
+      console.log("⭐ Has user rated?", response.data.hasUserRated);
       setRatingInfo(response.data);
     } catch (error) {
       console.error("Error fetching rating info:", error);

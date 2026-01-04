@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import ProductCard from "./ProductCard";
 
 const ProductSection = ({
@@ -30,13 +31,13 @@ const ProductSection = ({
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
 
-        <a
-          href={`/products?category=${categoryId}`}
-          className="text-purple-600 hover:text-purple-700 font-medium flex items-center space-x-1"
+        <Link
+          to={`/products?category=${categoryId}`}
+          className="text-purple-600 hover:text-purple-700 font-medium flex items-center space-x-1 transition-colors"
         >
           <span>View All</span>
           <ChevronRight className="w-4 h-4" />
-        </a>
+        </Link>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">

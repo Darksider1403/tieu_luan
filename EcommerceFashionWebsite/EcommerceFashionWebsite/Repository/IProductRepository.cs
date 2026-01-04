@@ -33,13 +33,8 @@ namespace EcommerceFashionWebsite.Repository
         Task<List<Slider>> GetAllSlidersAsync();
 
         // New comment and rating methods
-        Task<List<ProductComment>> GetProductCommentsAsync(string productId);
-        Task<int> AddProductCommentAsync(ProductComment comment);
-        Task<int> UpdateProductCommentAsync(ProductComment comment);
-        Task<bool> DeleteProductCommentAsync(int commentId);
         Task<double> GetProductAverageRatingAsync(string productId);
         Task<int> GetOrCreateProductRatingAsync(string productId, int accountId, int rating);
-        Task<bool> HasUserCommentedAsync(string productId, int accountId);
         
         Task<int> GetProductTotalRatingsAsync(string productId);
         Task<Dictionary<int, int>> GetProductRatingDistributionAsync(string productId);

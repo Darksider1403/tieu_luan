@@ -26,6 +26,8 @@ namespace EcommerceFashionWebsite.Data
         public DbSet<ProductRating> ProductRatings { get; set; }
         public DbSet<Cart> Carts { get; set; }
         public DbSet<ProductComment> ProductComments { get; set; }
+        public DbSet<CommentHelpful> CommentHelpfuls { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
         
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -52,17 +54,31 @@ namespace EcommerceFashionWebsite.Data
             
             // ===== ProductComment Configuration =====
             modelBuilder.Entity<ProductComment>(entity =>
-            {   
-                entity.HasKey(e => e.Id);
-                entity.ToTable("product_comments");
-        
-                entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
-                entity.Property(e => e.ProductId).HasColumnName("productId").IsRequired();
-                entity.Property(e => e.AccountId).HasColumnName("accountId").IsRequired();
-                entity.Property(e => e.Content).HasColumnName("content").IsRequired();
-                entity.Property(e => e.Rating).HasColumnName("rating");
-                entity.Property(e => e.DateComment).HasColumnName("dateComment");
-                entity.Property(e => e.Status).HasColumnName("status");
+            {
+                entity.HasOne(c => c.Product)
+                    .WithMany()
+                    .HasForeignKey(c => c.ProductId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(c => c.User)
+                    .WithMany()
+                    .HasForeignKey(c => c.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(c => c.ParentComment)
+                    .WithMany(c => c.Replies)
+                    .HasForeignKey(c => c.ParentId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(c => c.ProductId);
+                entity.HasIndex(c => c.UserId);
+                entity.HasIndex(c => c.ParentId);
+                entity.HasIndex(c => c.Status);
+            });
+            
+            modelBuilder.Entity<CommentHelpful>(entity =>
+            {
+                entity.HasIndex(e => new { e.CommentId, e.UserId }).IsUnique();
             });
             
             // ===== CART CONFIGURATION - CRITICAL FIX =====
@@ -149,6 +165,49 @@ namespace EcommerceFashionWebsite.Data
                 .WithOne()
                 .HasForeignKey(p => p.IdCategory)
                 .HasPrincipalKey(c => c.Id);
+            
+            modelBuilder.Entity<ProductRating>(entity =>
+            {
+                entity.ToTable("product_ratings");
+                entity.HasKey(e => e.Id);
+    
+                entity.Property(e => e.ProductId).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.AccountId).IsRequired();
+                entity.Property(e => e.Rating).IsRequired();
+                entity.Property(e => e.DateRating).IsRequired();
+    
+                // Unique constraint: one rating per user per product
+                entity.HasIndex(e => new { e.ProductId, e.AccountId }).IsUnique();
+    
+                // Foreign keys
+                entity.HasOne(e => e.Product)
+                    .WithMany()
+                    .HasForeignKey(e => e.ProductId)
+                    .OnDelete(DeleteBehavior.Cascade);
+    
+                entity.HasOne(e => e.Account)
+                    .WithMany()
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            
+            modelBuilder.Entity<ChatMessage>(entity =>
+            {
+                entity.ToTable("chat_messages");
+                entity.HasKey(e => e.Id);
+    
+                entity.Property(e => e.UserMessage).IsRequired();
+                entity.Property(e => e.BotResponse).IsRequired();
+                entity.Property(e => e.Timestamp).IsRequired();
+    
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+    
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => e.Timestamp);
+            });
         }
     }
 }

@@ -6,6 +6,8 @@ import { cartService } from "../services/cartService";
 import ProductImageGallery from "./ProductImageGallery";
 import Toast from "./Toast";
 import ProductRating from "./ProductRating";
+import ProductComments from "./ProductComments";
+import SuggestedProducts from "./SuggestedProducts";
 
 function ProductDetail() {
   const { id } = useParams();
@@ -77,8 +79,14 @@ function ProductDetail() {
 
   const updateCartSize = async () => {
     try {
-      const response = await fetch("http://localhost:5001/api/cart/size");
-      const data = await response.json();
+      // Only update cart size if user is authenticated
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        return;
+      }
+
+      const size = await cartService.getCartSize();
+      // You can emit this to parent component if needed
     } catch (error) {
       console.error("Error updating cart size:", error);
     }
@@ -366,6 +374,19 @@ function ProductDetail() {
             </div>
           </div>
         </div>
+
+        {/* Comments Section */}
+        <ProductComments productId={id} />
+
+        {/* Suggested Products Section */}
+        {product?.categoryId && (
+          <div className="mt-8">
+            <SuggestedProducts
+              currentProductId={product.id}
+              categoryId={product.categoryId}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
