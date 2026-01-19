@@ -10,8 +10,12 @@ export const accountService = {
 
       // Save token and user data to localStorage
       if (response.data.success && response.data.token) {
-        localStorage.setItem("authToken", response.data.token);
+        localStorage.setItem("token", response.data.token);
         localStorage.setItem("user", JSON.stringify(response.data.user));
+        // Store role separately for easy access by chatbot
+        if (response.data.user.role) {
+          localStorage.setItem("role", response.data.user.role);
+        }
       }
 
       return response.data;
@@ -38,8 +42,9 @@ export const accountService = {
       }
 
       // Clear all local storage
-      localStorage.removeItem("authToken");
+      localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.removeItem("role");
 
       // Clear session storage if you use it
       sessionStorage.clear();
@@ -47,8 +52,9 @@ export const accountService = {
       return { success: true };
     } catch (error) {
       // Even if there's an error, clear local data
-      localStorage.removeItem("authToken");
+      localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.removeItem("role");
       sessionStorage.clear();
 
       throw new Error(error.response?.data?.error || "Logout failed");
@@ -80,7 +86,7 @@ export const accountService = {
   },
 
   isAuthenticated: () => {
-    return !!localStorage.getItem("authToken");
+    return !!localStorage.getItem("token");
   },
 
   getUser: () => {
@@ -89,7 +95,7 @@ export const accountService = {
   },
 
   getToken: () => {
-    return localStorage.getItem("authToken");
+    return localStorage.getItem("token");
   },
 
   verifyEmail: async (code) => {

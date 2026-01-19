@@ -80,7 +80,7 @@ function ProductDetail() {
   const updateCartSize = async () => {
     try {
       // Only update cart size if user is authenticated
-      const token = localStorage.getItem("authToken");
+      const token = localStorage.getItem("token");
       if (!token) {
         return;
       }

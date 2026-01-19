@@ -32,8 +32,9 @@ function AdminLayout() {
       window.location.href = "/login";
     } catch (error) {
       console.error("Logout error:", error);
-      localStorage.removeItem("authToken");
+      localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.removeItem("role");
       window.location.href = "/login";
     }
   };

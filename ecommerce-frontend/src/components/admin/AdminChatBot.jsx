@@ -10,7 +10,7 @@ import {
   ShoppingCart,
   DollarSign,
 } from "lucide-react";
-import chatbotService from "../../services/chatbotService";
+import { chatbotService } from "../../services/chatbotService";
 import "./AdminChatbot.css";
 
 const AdminChatbot = () => {

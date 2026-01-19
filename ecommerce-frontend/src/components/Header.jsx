@@ -119,7 +119,7 @@ const Header = ({ user, cartSize, onCartSizeUpdate }) => {
       {/* Main Header */}
       <header
         className={`bg-white sticky top-0 z-50 transition-all duration-300 ${
-          isScrolled ? "shadow-lg" : "shadow-md"L
+          isScrolled ? "shadow-lg" : "shadow-md"
         }`}
       >
         <div className="container mx-auto px-4">
