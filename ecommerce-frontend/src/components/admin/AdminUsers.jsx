@@ -81,8 +81,15 @@ function AdminUsers() {
     e.preventDefault();
     try {
       if (editingUser) {
-        // Update user
-        await apiClient.put(`/account/${editingUser.id}`, formData);
+        // Update user - convert role to integer
+        const updateData = {
+          email: formData.email,
+          fullname: formData.fullname,
+          numberPhone: formData.numberPhone,
+          status: formData.status,
+          role: formData.role === "Admin" ? 1 : 0, // Convert string to int
+        };
+        await apiClient.put(`/account/${editingUser.id}`, updateData);
         setToast({
           message: "User updated successfully",
           type: "success",

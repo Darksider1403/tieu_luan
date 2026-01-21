@@ -168,6 +168,42 @@ public class AccountController : ControllerBase
         }
     }
 
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<AccountDto>> GetCurrentUser()
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { error = "User not authenticated" });
+            }
+
+            var account = await _accountService.GetAccountByIdAsync(userId);
+            if (account == null)
+            {
+                return NotFound(new { error = "Account not found" });
+            }
+
+            return Ok(new AccountDto
+            {
+                Id = account.Id,
+                Username = account.Username,
+                Email = account.Email,
+                Fullname = account.Fullname,
+                NumberPhone = account.NumberPhone,
+                Status = account.Status,
+                Role = account.Role
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving current user");
+            return StatusCode(500, new { error = "An error occurred while retrieving your account" });
+        }
+    }
+
     [HttpGet("{id}")]
     public async Task<ActionResult<AccountDto>> GetAccount(int id)
     {
@@ -460,12 +496,45 @@ public class AccountController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public async Task<ActionResult> UpdateUser(int id, [FromBody] UpdateAccountDto dto)
     {
         try
         {
-            _logger.LogInformation("Updating user {UserId}", id);
+            _logger.LogInformation("=== UPDATE USER REQUEST for UserId: {UserId} ===", id);
+            _logger.LogInformation("Received DTO - Email: '{Email}', Fullname: '{Fullname}', Phone: '{Phone}', Status: {Status}, Role: {Role}",
+                dto.Email, dto.Fullname, dto.NumberPhone, dto.Status, dto.Role);
+
+            // Get current user from token
+            var currentUserIdClaim = User.FindFirst("UserId")?.Value;
+            var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
+            
+            _logger.LogInformation("Current user: UserId={CurrentUserId}, Role={CurrentRole}", currentUserIdClaim, currentUserRole);
+            
+            if (string.IsNullOrEmpty(currentUserIdClaim) || !int.TryParse(currentUserIdClaim, out int currentUserId))
+            {
+                return Unauthorized(new { error = "User not authenticated" });
+            }
+
+            // Check if user is updating their own account or if they're an admin
+            bool isAdmin = currentUserRole == "Admin";
+            bool isOwnAccount = currentUserId == id;
+
+            _logger.LogInformation("Authorization check - IsAdmin: {IsAdmin}, IsOwnAccount: {IsOwnAccount}", isAdmin, isOwnAccount);
+
+            if (!isAdmin && !isOwnAccount)
+            {
+                _logger.LogWarning("User {CurrentUserId} attempted to update user {TargetUserId} without permission", 
+                    currentUserId, id);
+                return Forbid();
+            }
+
+            // Non-admin users cannot change role or status
+            if (!isAdmin && (dto.Role.HasValue || dto.Status.HasValue))
+            {
+                _logger.LogWarning("Non-admin user {UserId} attempted to change role or status", currentUserId);
+                return BadRequest(new { error = "You do not have permission to change role or status" });
+            }
 
             var account = await _accountService.GetAccountByIdAsync(id);
             if (account == null)
@@ -474,16 +543,18 @@ public class AccountController : ControllerBase
                 return NotFound(new { error = "User not found" });
             }
 
+            _logger.LogInformation("Calling UpdateAccountAsync...");
+
             // Use the new complete update method
             var result = await _accountService.UpdateAccountAsync(id, dto);
 
             if (!result)
             {
-                _logger.LogWarning("Failed to update user {UserId}", id);
+                _logger.LogWarning("UpdateAccountAsync returned false for user {UserId}", id);
                 return BadRequest(new { error = "Failed to update user" });
             }
 
-            _logger.LogInformation("Successfully updated user {UserId}", id);
+            _logger.LogInformation("=== Successfully updated user {UserId} ===", id);
             return Ok(new { success = true, message = "User updated successfully" });
         }
         catch (Exception ex)

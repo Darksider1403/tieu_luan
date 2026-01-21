@@ -773,6 +773,8 @@ public class AccountRepository : IAccountRepository
         try
         {
             _logger.LogInformation("=== START UpdateAccountAsync for account {AccountId} ===", accountId);
+            _logger.LogInformation("DTO - Email: '{Email}', Fullname: '{Fullname}', Phone: '{Phone}', Status: {Status}, Role: {Role}",
+                dto.Email, dto.Fullname, dto.NumberPhone, dto.Status, dto.Role);
 
             var account = await _context.Accounts.FindAsync(accountId);
             if (account == null)
@@ -781,37 +783,60 @@ public class AccountRepository : IAccountRepository
                 return false;
             }
 
-            _logger.LogInformation("Found account: Username={Username}", account.Username);
+            _logger.LogInformation("Current account - Email: '{Email}', Fullname: '{Fullname}', Phone: '{Phone}', Status: {Status}",
+                account.Email, account.Fullname, account.NumberPhone, account.Status);
 
             bool hasChanges = false;
 
-            // Update account fields if provided
-            if (!string.IsNullOrEmpty(dto.Email) && account.Email != dto.Email)
+            // Update account fields if provided (trim for comparison)
+            if (!string.IsNullOrWhiteSpace(dto.Email))
             {
-                _logger.LogInformation("Updating email from {OldEmail} to {NewEmail}", account.Email, dto.Email);
-                account.Email = dto.Email;
-                hasChanges = true;
+                var newEmail = dto.Email.Trim();
+                if (account.Email != newEmail)
+                {
+                    _logger.LogInformation("Updating email from '{OldEmail}' to '{NewEmail}'", account.Email, newEmail);
+                    account.Email = newEmail;
+                    hasChanges = true;
+                }
+                else
+                {
+                    _logger.LogInformation("Email unchanged: '{Email}'", account.Email);
+                }
             }
 
-            if (!string.IsNullOrEmpty(dto.Fullname) && account.Fullname != dto.Fullname)
+            if (!string.IsNullOrWhiteSpace(dto.Fullname))
             {
-                _logger.LogInformation("Updating fullname from {OldName} to {NewName}", account.Fullname, dto.Fullname);
-                account.Fullname = dto.Fullname;
-                hasChanges = true;
+                var newFullname = dto.Fullname.Trim();
+                if (account.Fullname != newFullname)
+                {
+                    _logger.LogInformation("Updating fullname from '{OldName}' to '{NewName}'", account.Fullname, newFullname);
+                    account.Fullname = newFullname;
+                    hasChanges = true;
+                }
+                else
+                {
+                    _logger.LogInformation("Fullname unchanged: '{Fullname}'", account.Fullname);
+                }
             }
 
-            if (!string.IsNullOrEmpty(dto.NumberPhone) && account.NumberPhone != dto.NumberPhone)
+            if (!string.IsNullOrWhiteSpace(dto.NumberPhone))
             {
-                _logger.LogInformation("Updating phone from {OldPhone} to {NewPhone}", account.NumberPhone,
-                    dto.NumberPhone);
-                account.NumberPhone = dto.NumberPhone;
-                hasChanges = true;
+                var newPhone = dto.NumberPhone.Trim();
+                if (account.NumberPhone != newPhone)
+                {
+                    _logger.LogInformation("Updating phone from '{OldPhone}' to '{NewPhone}'", account.NumberPhone, newPhone);
+                    account.NumberPhone = newPhone;
+                    hasChanges = true;
+                }
+                else
+                {
+                    _logger.LogInformation("Phone unchanged: '{Phone}'", account.NumberPhone);
+                }
             }
 
             if (dto.Status.HasValue && account.Status != dto.Status.Value)
             {
-                _logger.LogInformation("Updating status from {OldStatus} to {NewStatus}", account.Status,
-                    dto.Status.Value);
+                _logger.LogInformation("Updating status from {OldStatus} to {NewStatus}", account.Status, dto.Status.Value);
                 account.Status = dto.Status.Value;
                 hasChanges = true;
             }
@@ -819,15 +844,25 @@ public class AccountRepository : IAccountRepository
             // Save account changes
             if (hasChanges)
             {
+                _logger.LogInformation("Saving account changes to database...");
                 _context.Entry(account).State = EntityState.Modified;
                 var accountResult = await _context.SaveChangesAsync();
                 _logger.LogInformation("Account update: {Rows} rows affected", accountResult);
+                
+                if (accountResult == 0)
+                {
+                    _logger.LogWarning("SaveChanges returned 0 rows affected!");
+                }
+            }
+            else
+            {
+                _logger.LogInformation("No account field changes detected, skipping account save");
             }
 
             // Update role if provided
             if (dto.Role.HasValue)
             {
-                _logger.LogInformation("Updating role to {Role}", dto.Role.Value);
+                _logger.LogInformation("Processing role update to {Role}", dto.Role.Value);
 
                 var accessLevel = await _context.AccessLevels
                     .FirstOrDefaultAsync(al => al.IdAccount == accountId);
@@ -836,10 +871,21 @@ public class AccountRepository : IAccountRepository
                 {
                     if (accessLevel.Role != dto.Role.Value)
                     {
-                        _logger.LogInformation("Changing role from {OldRole} to {NewRole}", accessLevel.Role,
-                            dto.Role.Value);
+                        _logger.LogInformation("Changing role from {OldRole} to {NewRole}", accessLevel.Role, dto.Role.Value);
                         accessLevel.Role = dto.Role.Value;
                         _context.Entry(accessLevel).State = EntityState.Modified;
+                        
+                        var roleResult = await _context.SaveChangesAsync();
+                        _logger.LogInformation("Role update: {Rows} rows affected", roleResult);
+                        
+                        if (roleResult == 0)
+                        {
+                            _logger.LogWarning("Role SaveChanges returned 0 rows affected!");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Role unchanged: {Role}", accessLevel.Role);
                     }
                 }
                 else
@@ -851,10 +897,19 @@ public class AccountRepository : IAccountRepository
                         Role = dto.Role.Value
                     };
                     _context.AccessLevels.Add(accessLevel);
+                    
+                    var roleResult = await _context.SaveChangesAsync();
+                    _logger.LogInformation("New access level created: {Rows} rows affected", roleResult);
+                    
+                    if (roleResult == 0)
+                    {
+                        _logger.LogWarning("New access level SaveChanges returned 0 rows affected!");
+                    }
                 }
-
-                var roleResult = await _context.SaveChangesAsync();
-                _logger.LogInformation("Role update: {Rows} rows affected", roleResult);
+            }
+            else
+            {
+                _logger.LogInformation("No role update requested");
             }
 
             _logger.LogInformation("=== END UpdateAccountAsync - Success ===");

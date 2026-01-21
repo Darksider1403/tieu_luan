@@ -163,4 +163,33 @@ export const accountService = {
       throw new Error(error.response?.data?.error || "Invalid reset code");
     }
   },
+
+  updateUser: async (userId, userData) => {
+    try {
+      const response = await apiClient.put(`/account/${userId}`, {
+        email: userData.email,
+        fullname: userData.fullname,
+        numberPhone: userData.numberPhone,
+        status: userData.status,
+        role: typeof userData.role === "string" 
+          ? (userData.role === "Admin" ? 1 : 0) 
+          : userData.role,
+      });
+      
+      // Update localStorage if updating current user
+      const currentUser = accountService.getUser();
+      if (currentUser && currentUser.id === userId) {
+        const updatedUser = { 
+          ...currentUser, 
+          ...userData,
+          role: typeof userData.role === "string" ? userData.role : (userData.role === 1 ? "Admin" : "User")
+        };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+      
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.error || "Failed to update user");
+    }
+  },
 };

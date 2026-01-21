@@ -95,9 +95,18 @@ function UserSettings() {
     setSaving(true);
 
     try {
-      await apiClient.put(`/account/${user.id}`, profileData);
+      // Prepare data for backend - exclude address as it's not in UpdateAccountDto
+      const updateData = {
+        email: profileData.email,
+        fullname: profileData.fullname,
+        numberPhone: profileData.numberPhone,
+        // Don't include status or role in user self-update
+      };
 
-      // Update local storage
+      // Use accountService for consistency
+      await accountService.updateUser(user.id, updateData);
+
+      // Update local storage with all profile data including address
       const updatedUser = { ...user, ...profileData };
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setUser(updatedUser);
@@ -107,8 +116,9 @@ function UserSettings() {
         type: "success",
       });
     } catch (error) {
+      console.error("Profile update error:", error);
       setToast({
-        message: error.response?.data?.error || "Failed to update profile",
+        message: error.message || "Failed to update profile",
         type: "error",
       });
     } finally {
