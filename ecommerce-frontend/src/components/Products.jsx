@@ -49,9 +49,19 @@ const Products = () => {
             categoryNames[categoryId] || `Category ${categoryId}`
           );
         } else {
-          // Fetch all products
-          productsData = await productService.getProducts();
+          // Fetch all products (no category filter)
+          productsData = await productService.getAllProducts();
+          // Ensure it's an array
+          if (!Array.isArray(productsData)) {
+            productsData = productsData.items || [];
+          }
           setCategoryName("All Products");
+        }
+
+        // Ensure productsData is an array
+        if (!Array.isArray(productsData)) {
+          console.error("Products data is not an array:", productsData);
+          productsData = [];
         }
 
         // Normalize ratings like in Home.jsx

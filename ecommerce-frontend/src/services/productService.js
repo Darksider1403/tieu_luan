@@ -1,13 +1,59 @@
 import apiClient from "./apiService";
 
 export const productService = {
-  // Get all products (for admin)
-  getProducts: async () => {
+  // Get all products (for admin only)
+  getAllProductsAdmin: async () => {
     try {
       const response = await apiClient.get("/product/all");
       return response.data;
     } catch (error) {
       console.error("Error fetching products:", error);
+      throw error;
+    }
+  },
+
+  // Get products with pagination (public endpoint - for regular users)
+  getProducts: async (page = 0, pageSize = 12, category = 1, order = null, filter = null) => {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: pageSize.toString(),
+        category: category.toString(),
+      });
+      
+      if (order) params.append('order', order);
+      if (filter) params.append('filter', filter);
+      
+      const response = await apiClient.get(`/product?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      throw error;
+    }
+  },
+
+  getAllProducts: async (limit = 500) => {
+    try {
+      const categoriesResponse = await apiClient.get("/product/categories");
+      const categories = categoriesResponse.data;
+
+      const categoryIds = Object.keys(categories).map(id => parseInt(id));
+      
+      console.log("Fetching products from all categories:", categoryIds);
+      
+      const promises = categoryIds.map(categoryId =>
+        apiClient.get(`/product/category/${categoryId}?limit=${limit}`)
+      );
+      
+      const responses = await Promise.all(promises);
+      
+      const allProducts = responses.flatMap(response => response.data);
+      
+      console.log(`Total products fetched: ${allProducts.length}`);
+      
+      return allProducts;
+    } catch (error) {
+      console.error("Error fetching all products:", error);
       throw error;
     }
   },

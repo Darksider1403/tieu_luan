@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using EcommerceFashionWebsite.Data;
 using EcommerceFashionWebsite.DTOs;
 using EcommerceFashionWebsite.Entity;
@@ -112,6 +112,42 @@ public class AccountRepository : IAccountRepository
         return await _context.SaveChangesAsync();
     }
 
+    public async Task<int> InvalidateOldVerificationCodesAsync(int accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Invalidating old verification codes for account {AccountId}", accountId);
+            
+            // Find all unused codes for this account
+            var oldCodes = await _context.VerifyEmails
+                .Where(ve => ve.IdAccount == accountId && !ve.Status)
+                .ToListAsync();
+
+            if (oldCodes.Any())
+            {
+                _logger.LogInformation("Found {Count} old verification codes to invalidate", oldCodes.Count);
+                
+                // Mark them as used
+                foreach (var code in oldCodes)
+                {
+                    code.Status = true;
+                }
+
+                var result = await _context.SaveChangesAsync();
+                _logger.LogInformation("Invalidated {Count} codes. Rows affected: {Result}", oldCodes.Count, result);
+                return result;
+            }
+
+            _logger.LogInformation("No old verification codes found for account {AccountId}", accountId);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error invalidating old verification codes for account {AccountId}", accountId);
+            throw;
+        }
+    }
+
     public async Task<int> DeleteAccountAsync(string username, string email)
     {
         var account = await _context.Accounts
@@ -220,14 +256,54 @@ public class AccountRepository : IAccountRepository
 
     public async Task<int> CreateRoleAccountAsync(Account account, int role)
     {
-        var accessLevel = new AccessLevel
+        try
         {
-            Role = role, // 0 = User, 1 = Admin
-            IdAccount = account.Id
-        };
+            _logger.LogInformation("=== START CreateRoleAccountAsync for account {AccountId} with role {Role} ===", 
+                account.Id, role);
 
-        _context.AccessLevels.Add(accessLevel);
-        return await _context.SaveChangesAsync();
+            // Check if role already exists for this account
+            var existingAccessLevel = await _context.AccessLevels
+                .FirstOrDefaultAsync(al => al.IdAccount == account.Id);
+
+            if (existingAccessLevel != null)
+            {
+                _logger.LogInformation("Access level already exists for account {AccountId}. Current role: {CurrentRole}", 
+                    account.Id, existingAccessLevel.Role);
+                
+                // Update existing role if different
+                if (existingAccessLevel.Role != role)
+                {
+                    _logger.LogInformation("Updating role from {OldRole} to {NewRole}", existingAccessLevel.Role, role);
+                    existingAccessLevel.Role = role;
+                    _context.Entry(existingAccessLevel).State = EntityState.Modified;
+                    var result = await _context.SaveChangesAsync();
+                    _logger.LogInformation("Role updated. Rows affected: {Result}", result);
+                    return result;
+                }
+                
+                _logger.LogInformation("Role is already correct. No update needed.");
+                return 1; // Return success even though no changes were made
+            }
+
+            // Create new access level
+            _logger.LogInformation("Creating new access level for account {AccountId}", account.Id);
+            var accessLevel = new AccessLevel
+            {
+                Role = role, // 0 = User, 1 = Admin
+                IdAccount = account.Id
+            };
+
+            _context.AccessLevels.Add(accessLevel);
+            var saveResult = await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("=== END CreateRoleAccountAsync - Success. Rows affected: {Result} ===", saveResult);
+            return saveResult;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating role for account {AccountId}", account.Id);
+            throw;
+        }
     }
 
     public async Task<int> GetTotalAccountsAsync()
@@ -292,23 +368,55 @@ public class AccountRepository : IAccountRepository
 
     public async Task<Account?> VerifyEmailAsync(string code)
     {
-        var currentDate = DateTime.Now.Date;
-
-        var verifyEmail = await _context.VerifyEmails
-            .Include(ve => ve.Account)
-            .FirstOrDefaultAsync(ve =>
-                ve.Code == code &&
-                ve.DateExpired > currentDate &&
-                !ve.Status);
-
-        if (verifyEmail != null)
+        try
         {
+            _logger.LogInformation("=== START VerifyEmailAsync for code: {Code} ===", code);
+            
+            var currentDateTime = DateTime.Now;
+            _logger.LogInformation("Current DateTime: {CurrentDateTime}", currentDateTime);
+
+            // First, find the verify email record
+            var verifyEmail = await _context.VerifyEmails
+                .Include(ve => ve.Account)
+                .FirstOrDefaultAsync(ve => ve.Code == code);
+
+            if (verifyEmail == null)
+            {
+                _logger.LogWarning("No verification record found for code: {Code}", code);
+                return null;
+            }
+
+            _logger.LogInformation("Found verification record - ID: {Id}, IdAccount: {IdAccount}, DateExpired: {DateExpired}, Status: {Status}", 
+                verifyEmail.Id, verifyEmail.IdAccount, verifyEmail.DateExpired, verifyEmail.Status);
+
+            // Check if already used
+            if (verifyEmail.Status)
+            {
+                _logger.LogWarning("Verification code already used: {Code}", code);
+                return null;
+            }
+
+            // Check if expired
+            if (verifyEmail.DateExpired <= currentDateTime)
+            {
+                _logger.LogWarning("Verification code expired. Expired at: {DateExpired}, Current: {CurrentDateTime}", 
+                    verifyEmail.DateExpired, currentDateTime);
+                return null;
+            }
+
+            // All checks passed, mark as verified
+            _logger.LogInformation("Verification successful. Marking code as used and returning account.");
             verifyEmail.Status = true;
             await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("=== END VerifyEmailAsync - Success ===");
             return verifyEmail.Account;
         }
-
-        return null;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during email verification for code: {Code}", code);
+            return null;
+        }
     }
 
     public async Task<bool> IsAccountExistAsync(string email)
@@ -318,16 +426,52 @@ public class AccountRepository : IAccountRepository
 
     public async Task<Account?> VerifyPasswordResetCodeAsync(string code)
     {
-        var currentDate = DateTime.Now;
+        try
+        {
+            _logger.LogInformation("=== START VerifyPasswordResetCodeAsync for code: {Code} ===", code);
+            
+            var currentDateTime = DateTime.Now;
+            _logger.LogInformation("Current DateTime: {CurrentDateTime}", currentDateTime);
 
-        var verifyEmail = await _context.VerifyEmails
-            .Include(ve => ve.Account)
-            .FirstOrDefaultAsync(ve =>
-                ve.Code == code &&
-                ve.DateExpired > currentDate &&
-                !ve.Status);
+            // First, find the verify email record
+            var verifyEmail = await _context.VerifyEmails
+                .Include(ve => ve.Account)
+                .FirstOrDefaultAsync(ve => ve.Code == code);
 
-        return verifyEmail?.Account;
+            if (verifyEmail == null)
+            {
+                _logger.LogWarning("No reset code record found for code: {Code}", code);
+                return null;
+            }
+
+            _logger.LogInformation("Found reset code record - ID: {Id}, IdAccount: {IdAccount}, DateExpired: {DateExpired}, Status: {Status}", 
+                verifyEmail.Id, verifyEmail.IdAccount, verifyEmail.DateExpired, verifyEmail.Status);
+
+            // Check if already used
+            if (verifyEmail.Status)
+            {
+                _logger.LogWarning("Reset code already used: {Code}", code);
+                return null;
+            }
+
+            // Check if expired
+            if (verifyEmail.DateExpired <= currentDateTime)
+            {
+                _logger.LogWarning("Reset code expired. Expired at: {DateExpired}, Current: {CurrentDateTime}", 
+                    verifyEmail.DateExpired, currentDateTime);
+                return null;
+            }
+
+            // All checks passed
+            _logger.LogInformation("Reset code is valid");
+            _logger.LogInformation("=== END VerifyPasswordResetCodeAsync - Success ===");
+            return verifyEmail.Account;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during password reset code verification for code: {Code}", code);
+            return null;
+        }
     }
 
     public async Task<bool> UpdateAccountRoleAsync(int accountId, int role)

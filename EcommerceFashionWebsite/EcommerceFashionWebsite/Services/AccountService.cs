@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using EcommerceFashionWebsite.Entity;
 using EcommerceFashionWebsite.DTOs;
 using EcommerceFashionWebsite.Repository;
@@ -98,19 +98,39 @@ public class AccountService : IAccountService
 
     public async Task<bool> SendVerificationEmailAsync(Account account)
     {
-        var code = _emailService.CreateCode();
-        var message = $"http://localhost:3000/verify-email?code={code}";
-        var dateCreated = DateTime.Now;
-        var dateExpired = dateCreated.AddDays(1);
-
-        var result =
-            await _accountRepository.CreateVerifyEmailAsync(code, dateCreated, dateExpired, false, account.Id);
-        if (result > 0)
+        try
         {
-            return await _emailService.SendAsync(account.Email, "Xác nhận email", message);
-        }
+            _logger.LogInformation("=== START SendVerificationEmailAsync for account {AccountId} ===", account.Id);
+            
+            // Invalidate all old verification codes for this account
+            await _accountRepository.InvalidateOldVerificationCodesAsync(account.Id);
+            _logger.LogInformation("Invalidated old verification codes for account {AccountId}", account.Id);
+            
+            var code = _emailService.CreateCode();
+            _logger.LogInformation("Generated new verification code: {Code} for account {AccountId}", code, account.Id);
+            
+            var message = $"http://localhost:3000/verify-email?code={code}";
+            var dateCreated = DateTime.Now;
+            var dateExpired = dateCreated.AddDays(1);
 
-        return false;
+            var result =
+                await _accountRepository.CreateVerifyEmailAsync(code, dateCreated, dateExpired, false, account.Id);
+            if (result > 0)
+            {
+                _logger.LogInformation("Verification code saved to database for account {AccountId}", account.Id);
+                var emailSent = await _emailService.SendAsync(account.Email, "Xác nhận email", message);
+                _logger.LogInformation("=== END SendVerificationEmailAsync - Email sent: {Result} ===", emailSent);
+                return emailSent;
+            }
+
+            _logger.LogWarning("=== END SendVerificationEmailAsync - Failed to save code ===");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in SendVerificationEmailAsync for account {AccountId}", account.Id);
+            return false;
+        }
     }
 
     public async Task<bool> SendForgotPasswordEmailAsync(Account account)
@@ -131,15 +151,39 @@ public class AccountService : IAccountService
 
     public async Task<Account?> VerifyEmailAsync(string code)
     {
-        var account = await _accountRepository.VerifyEmailAsync(code);
-        if (account != null)
+        try
         {
-            await _accountRepository.UpdateAccountStatusAsync(account.Id.ToString(), 1);
-            await _accountRepository.CreateRoleAccountAsync(account, 0);
-            return account;
-        }
+            _logger.LogInformation("=== START AccountService.VerifyEmailAsync for code: {Code} ===", code);
+            
+            var account = await _accountRepository.VerifyEmailAsync(code);
+            if (account != null)
+            {
+                _logger.LogInformation("Account found from verification: ID={AccountId}, Username={Username}", 
+                    account.Id, account.Username);
+                
+                // Update account status to active (1)
+                _logger.LogInformation("Updating account status to active...");
+                var statusUpdated = await _accountRepository.UpdateAccountStatusAsync(account.Id.ToString(), 1);
+                _logger.LogInformation("Status update result: {Result}", statusUpdated);
+                
+                // Create user role (0 = User)
+                _logger.LogInformation("Creating user role...");
+                var roleResult = await _accountRepository.CreateRoleAccountAsync(account, 0);
+                _logger.LogInformation("Role creation result: {Result}", roleResult);
+                
+                _logger.LogInformation("=== END AccountService.VerifyEmailAsync - Success ===");
+                return account;
+            }
 
-        return null;
+            _logger.LogWarning("Verification failed - account not found or invalid code");
+            _logger.LogInformation("=== END AccountService.VerifyEmailAsync - Failed ===");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in AccountService.VerifyEmailAsync for code: {Code}", code);
+            return null;
+        }
     }
 
     public async Task<bool> IsVerificationCodeValidAsync(string code)
@@ -219,19 +263,39 @@ public class AccountService : IAccountService
 
     public async Task<bool> SendPasswordResetEmailAsync(Account account)
     {
-        var code = _emailService.CreateCode();
-        var message = $"http://localhost:3000/forgot-password?code={code}";
-        var dateCreated = DateTime.Now;
-        var dateExpired = dateCreated.AddDays(1);
-    
-        var result = await _accountRepository.CreateVerifyEmailAsync(code, dateCreated, dateExpired, false, account.Id);
-        if (result > 0)
+        try
         {
-            return await _emailService.SendAsync(account.Email, "Đặt lại mật khẩu", 
-                $"Click vào link sau để đặt lại mật khẩu: {message}");
-        }
+            _logger.LogInformation("=== START SendPasswordResetEmailAsync for account {AccountId} ===", account.Id);
+            
+            // Invalidate all old reset codes for this account
+            await _accountRepository.InvalidateOldVerificationCodesAsync(account.Id);
+            _logger.LogInformation("Invalidated old reset codes for account {AccountId}", account.Id);
+            
+            var code = _emailService.CreateCode();
+            _logger.LogInformation("Generated new reset code: {Code} for account {AccountId}", code, account.Id);
+            
+            var message = $"http://localhost:3000/forgot-password?code={code}";
+            var dateCreated = DateTime.Now;
+            var dateExpired = dateCreated.AddDays(1);
+        
+            var result = await _accountRepository.CreateVerifyEmailAsync(code, dateCreated, dateExpired, false, account.Id);
+            if (result > 0)
+            {
+                _logger.LogInformation("Reset code saved to database for account {AccountId}", account.Id);
+                var emailSent = await _emailService.SendAsync(account.Email, "Đặt lại mật khẩu", 
+                    $"Click vào link sau để đặt lại mật khẩu: {message}");
+                _logger.LogInformation("=== END SendPasswordResetEmailAsync - Email sent: {Result} ===", emailSent);
+                return emailSent;
+            }
 
-        return false;
+            _logger.LogWarning("=== END SendPasswordResetEmailAsync - Failed to save code ===");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in SendPasswordResetEmailAsync for account {AccountId}", account.Id);
+            return false;
+        }
     }
 
     public async Task<Account?> VerifyPasswordResetCodeAsync(string code)

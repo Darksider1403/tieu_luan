@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Claims;
@@ -201,19 +201,34 @@ public class AccountController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("=== START VerifyEmail endpoint for code: {Code} ===", code);
+            
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                _logger.LogWarning("Verification code is missing or empty");
+                return BadRequest(new { error = "Verification code is required" });
+            }
+
             var account = await _accountService.VerifyEmailAsync(code);
             if (account != null)
             {
-                _logger.LogInformation("Email verified successfully for account: {AccountId}", account.Id);
-                return Ok(new { success = true, message = "Email verified successfully" });
+                _logger.LogInformation("Email verified successfully for account: {AccountId}, Username: {Username}", 
+                    account.Id, account.Username);
+                return Ok(new { 
+                    success = true, 
+                    message = "Email đã được xác thực thành công! Tài khoản của bạn đã được kích hoạt." 
+                });
             }
 
-            return BadRequest(new { error = "Invalid or expired verification code" });
+            _logger.LogWarning("Email verification failed for code: {Code}", code);
+            return BadRequest(new { 
+                error = "Mã xác thực không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại email hoặc đăng ký lại." 
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying email with code: {Code}", code);
-            return StatusCode(500, new { error = "An error occurred during email verification" });
+            return StatusCode(500, new { error = "Có lỗi xảy ra trong quá trình xác thực email. Vui lòng thử lại sau." });
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using EcommerceFashionWebsite.DTOs;
+using EcommerceFashionWebsite.DTOs;
 using EcommerceFashionWebsite.Entity;
 
 namespace EcommerceFashionWebsite.Repository;
@@ -25,6 +25,7 @@ public interface IAccountRepository
     Task<bool> UpdateUserInfoAsync(string username, string newFullname);
     Task<bool> IsAccountExistAsync(string email);
     Task<int> CreateVerifyEmailAsync(string code, DateTime dateCreated, DateTime dateExpired, bool status, int idAccount);
+    Task<int> InvalidateOldVerificationCodesAsync(int accountId);
     Task<Account?> VerifyEmailAsync(string code);
     Task<Account?> VerifyPasswordResetCodeAsync(string code);
   

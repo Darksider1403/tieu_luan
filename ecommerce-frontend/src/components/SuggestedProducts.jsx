@@ -29,15 +29,17 @@ function SuggestedProducts({ currentProductId, categoryId }) {
         // If we don't have enough products (less than 4), add random products from all categories
         if (suggestedProducts.length < 4) {
           try {
-            const allProducts = await productService.getProducts();
+            const pagedResult = await productService.getProducts();
+            // Extract items from PagedResult
+            const allProducts = pagedResult.items || pagedResult || [];
             // Filter out current product and already selected products
             const selectedIds = new Set([
               currentProductId,
               ...suggestedProducts.map((p) => p.id),
             ]);
-            const otherProducts = allProducts.filter(
-              (p) => !selectedIds.has(p.id)
-            );
+            const otherProducts = Array.isArray(allProducts) 
+              ? allProducts.filter((p) => !selectedIds.has(p.id))
+              : [];
 
             // Shuffle and take random products to fill up to 4 total
             const shuffled = otherProducts.sort(() => Math.random() - 0.5);

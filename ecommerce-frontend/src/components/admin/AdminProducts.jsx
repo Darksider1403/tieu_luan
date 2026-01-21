@@ -41,8 +41,9 @@ function AdminProducts() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const data = await productService.getProducts();
-      setProducts(data);
+      // Admin uses getAllProductsAdmin to get all products without pagination
+      const data = await productService.getAllProductsAdmin();
+      setProducts(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching products:", error);
       setToast({

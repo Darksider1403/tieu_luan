@@ -1,13 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { CheckCircle, XCircle, Loader, Mail, ArrowRight } from "lucide-react";
 
 const EmailVerification = () => {
   const [verificationStatus, setVerificationStatus] = useState("loading"); // 'loading', 'success', 'error'
   const [message, setMessage] = useState("");
   const [countdown, setCountdown] = useState(5);
+  const hasVerified = useRef(false); // Flag to prevent double verification
 
   useEffect(() => {
     const verifyEmail = async () => {
+      // Prevent double verification
+      if (hasVerified.current) {
+        console.log("Verification already completed, skipping...");
+        return;
+      }
+      
+      hasVerified.current = true;
+
       try {
         // Get the verification code from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -18,6 +27,8 @@ const EmailVerification = () => {
           setMessage("Verification code is missing from the URL.");
           return;
         }
+
+        console.log("Starting email verification with code:", code);
 
         // Make API call to verify email
         const response = await fetch(
@@ -32,6 +43,7 @@ const EmailVerification = () => {
         );
 
         const data = await response.json();
+        console.log("Verification response:", { status: response.status, ok: response.ok, data });
 
         if (response.ok && data.success) {
           setVerificationStatus("success");
