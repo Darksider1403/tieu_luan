@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   User,
   Lock,
@@ -19,7 +20,8 @@ import apiClient from "../services/apiService";
 import Toast from "./Toast";
 
 function UserSettings() {
-  const [activeTab, setActiveTab] = useState("profile");
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || "profile");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

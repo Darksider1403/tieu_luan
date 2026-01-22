@@ -405,6 +405,63 @@ public class AccountController : ControllerBase
         }
     }
 
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<ActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+    {
+        try
+        {
+            // Get current user from token
+            var currentUserIdClaim = User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(currentUserIdClaim) || !int.TryParse(currentUserIdClaim, out int userId))
+            {
+                return Unauthorized(new { error = "User not authenticated" });
+            }
+
+            _logger.LogInformation("Change password request for user {UserId}", userId);
+
+            // Validate current password
+            var account = await _accountService.GetAccountByIdAsync(userId);
+            if (account == null)
+            {
+                return NotFound(new { error = "Account not found" });
+            }
+
+            var hashedCurrentPassword = _encryptService.EncryptMd5(dto.CurrentPassword);
+            if (account.Password != hashedCurrentPassword)
+            {
+                _logger.LogWarning("Invalid current password for user {UserId}", userId);
+                return BadRequest(new { error = "Mật khẩu hiện tại không đúng" });
+            }
+
+            // Validate new password
+            if (!await _accountService.ValidatePasswordAsync(dto.NewPassword))
+            {
+                return BadRequest(new
+                {
+                    error = "Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt"
+                });
+            }
+
+            // Update password
+            var hashedNewPassword = _encryptService.EncryptMd5(dto.NewPassword);
+            var result = await _accountService.UpdatePasswordAsync(userId, hashedNewPassword);
+
+            if (result)
+            {
+                _logger.LogInformation("Password changed successfully for user {UserId}", userId);
+                return Ok(new { success = true, message = "Đổi mật khẩu thành công" });
+            }
+
+            return StatusCode(500, new { error = "Đổi mật khẩu thất bại" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing password");
+            return StatusCode(500, new { error = "Có lỗi xảy ra khi đổi mật khẩu" });
+        }
+    }
+
     [HttpGet("all")]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<List<AccountDto>>> GetAllUsers()

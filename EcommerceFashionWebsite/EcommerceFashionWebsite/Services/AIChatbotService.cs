@@ -1,4 +1,4 @@
-﻿using Azure;
+using Azure;
 using Azure.AI.OpenAI;
 using EcommerceFashionWebsite.DTOs;
 using EcommerceFashionWebsite.Repository;
@@ -323,8 +323,25 @@ Doanh thu tháng này đạt 45.2M đ, tăng 18% so với tháng trước, vư�
                     // ORDER ANALYTICS
                     if (ContainsAny(lowerMessage, "đơn hàng", "order", "đơn", "giao hàng", "vận chuyển"))
                     {
-                        var orders = await GetOrderStatsAsync();
-                        context.Add($"🛒 **Đơn hàng:**\n{orders}");
+                        _logger.LogInformation("🔍 ADMIN ORDER QUERY detected in message: {Message}", lowerMessage);
+                        
+                        // Check if asking about specific user's orders
+                        var username = ExtractUsername(lowerMessage);
+                        _logger.LogInformation("📝 Extracted username: '{Username}'", username ?? "[NONE]");
+                        
+                        if (!string.IsNullOrEmpty(username))
+                        {
+                            _logger.LogInformation("✅ Fetching orders for username: {Username}", username);
+                            var userOrders = await GetUserOrdersAsync(username);
+                            _logger.LogInformation("📊 User orders result length: {Length}", userOrders.Length);
+                            context.Add($"🛒 **Đơn hàng của tài khoản '{username}':**\n{userOrders}");
+                        }
+                        else
+                        {
+                            _logger.LogInformation("📊 Fetching general order stats (no specific username)");
+                            var orders = await GetOrderStatsAsync();
+                            context.Add($"🛒 **Đơn hàng:**\n{orders}");
+                        }
 
                         // Add conversion and cancellation rates
                         if (ContainsAny(lowerMessage, "chuyển đổi", "conversion", "hủy", "cancel"))
@@ -395,11 +412,11 @@ Doanh thu tháng này đạt 45.2M đ, tăng 18% so với tháng trước, vư�
                         // Product categories
                         "áo", "quần", "váy", "đầm", "giày", "túi", "phụ kiện", "dép",
     
-                        // Styling & advice keywords (NEW!)
+                        // Styling & advice keywords 
                         "tư vấn", "advice", "gợi ý", "suggest", "recommend",
                         "phối đồ", "outfit", "kết hợp", "mix", "match",
     
-                        // Event/occasion keywords (NEW!)
+                        // Event/occasion keywords 
                         "dự tiệc", "party", "sự kiện", "event", "đi chơi", "dạo phố",
                         "đi làm", "công sở", "office", "du lịch", "travel",
                         "cưới", "wedding", "sinh nhật", "birthday",
@@ -1246,6 +1263,146 @@ First 5 products:";
             catch (Exception ex)
             {
                 return $"Error: {ex.Message}";
+            }
+        }
+
+        private string ExtractUsername(string message)
+        {
+            try
+            {
+                _logger.LogInformation("🔍 ExtractUsername - Input message: '{Message}'", message);
+                
+                // Patterns to extract username - using flexible patterns to handle encoding issues
+                var patterns = new[]
+                {
+                    @"t[àá].{0,3}\s*kho[aả].{0,3}n\s+[""']?(\w+)[""']?",  // tài khoản (flexible for encoding)
+                    @"user\s+[""']?(\w+)[""']?",
+                    @"username\s+[""']?(\w+)[""']?",
+                    @"c[ủu].{0,3}a\s+[""']?(\w+)[""']?",  // của
+                    @"kh[áà].{0,3}ch\s+h[àá]ng\s+[""']?(\w+)[""']?",  // khách hàng
+                    @"don\s+h[àá]ng\s+c[ủu].{0,3}a\s+[""']?(\w+)[""']?",  // đơn hàng của
+                    @"(\w+)\s+c[óo].{0,3}\s+nh.{0,3}ng\s+don",  // X có những đơn
+                };
+
+                foreach (var pattern in patterns)
+                {
+                    _logger.LogInformation("  Testing pattern: {Pattern}", pattern);
+                    var match = System.Text.RegularExpressions.Regex.Match(message, pattern, 
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (match.Success && match.Groups.Count > 1)
+                    {
+                        var username = match.Groups[1].Value;
+                        _logger.LogInformation("  ✅ MATCH! Extracted username: '{Username}'", username);
+                        return username;
+                    }
+                }
+
+                _logger.LogWarning("  ❌ No username pattern matched");
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error extracting username from message");
+                return string.Empty;
+            }
+        }
+
+        private async Task<string> GetUserOrdersAsync(string username)
+        {
+            try
+            {
+                // Find account by username
+                var account = await _context.Accounts
+                    .FirstOrDefaultAsync(a => a.Username == username);
+
+                if (account == null)
+                {
+                    return $"❌ Không tìm thấy tài khoản '{username}' trong hệ thống.";
+                }
+
+                // Get orders for this account
+                var orders = await _context.Orders
+                    .Where(o => o.IdAccount == account.Id)
+                    .Include(o => o.OrderDetail)
+                        .ThenInclude(od => od.Product)
+                    .OrderByDescending(o => o.DateBuy)
+                    .Take(10) // Limit to last 10 orders
+                    .ToListAsync();
+
+                if (!orders.Any())
+                {
+                    return $"📭 Tài khoản '{username}' chưa có đơn hàng nào.";
+                }
+
+                var result = $@"📊 **Thông tin tài khoản:**
+- Username: {username}
+- Họ tên: {account.Fullname ?? "N/A"}
+- Email: {account.Email}
+- Số điện thoại: {account.NumberPhone ?? "N/A"}
+- Trạng thái: {(account.Status == 1 ? "🟢 Hoạt động" : "🔴 Tạm khóa")}
+
+🛒 **Danh sách đơn hàng (10 đơn gần nhất):**
+
+";
+
+                for (int i = 0; i < orders.Count; i++)
+                {
+                    var order = orders[i];
+                    var statusText = order.Status switch
+                    {
+                        0 => "⏳ Chờ xác nhận",
+                        1 => "📦 Đã xác nhận",
+                        2 => "🚚 Đang giao",
+                        3 => "✅ Đã giao",
+                        4 => "⭐ Đã đánh giá",
+                        5 => "❌ Đã hủy",
+                        _ => "❓ Không xác định"
+                    };
+
+                    var totalAmount = order.OrderDetail?.Sum(od => od.Quantity * od.Price) ?? 0;
+                    var itemCount = order.OrderDetail?.Sum(od => od.Quantity) ?? 0;
+
+                    result += $@"
+**{i + 1}. Đơn hàng #{order.Id}**
+- Ngày đặt: {order.DateBuy:dd/MM/yyyy HH:mm}
+- Trạng thái: {statusText}
+- Tổng tiền: {totalAmount:N0}đ
+- Số lượng sản phẩm: {itemCount} món
+- Địa chỉ: {order.Address ?? "N/A"}";
+
+                    // Add product details
+                    if (order.OrderDetail != null && order.OrderDetail.Any())
+                    {
+                        result += "\n  Sản phẩm:";
+                        foreach (var detail in order.OrderDetail)
+                        {
+                            result += $"\n  • {detail.Product?.Name ?? "N/A"} x{detail.Quantity} - {detail.Price:N0}đ";
+                        }
+                    }
+
+                    result += "\n";
+                }
+
+                // Add summary statistics
+                var totalOrders = orders.Count;
+                var totalSpent = orders.Sum(o => o.OrderDetail?.Sum(od => od.Quantity * od.Price) ?? 0);
+                var completedOrders = orders.Count(o => o.Status >= 3 && o.Status != 5);
+                var cancelledOrders = orders.Count(o => o.Status == 5);
+
+                result += $@"
+📈 **Thống kê tổng quan:**
+- Tổng số đơn hàng: {totalOrders}
+- Đơn hoàn thành: {completedOrders}
+- Đơn đã hủy: {cancelledOrders}
+- Tổng giá trị: {totalSpent:N0}đ
+- Giá trị trung bình: {(totalOrders > 0 ? totalSpent / totalOrders : 0):N0}đ/đơn";
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting orders for user {Username}", username);
+                return $"⚠️ Có lỗi xảy ra khi lấy thông tin đơn hàng của '{username}': {ex.Message}";
             }
         }
         

@@ -229,7 +229,7 @@ function UserPage() {
             {/* Additional Actions */}
             <div className="mt-8 pt-6 border-t border-gray-200">
               <button
-                onClick={() => navigate("/change-password")}
+                onClick={() => navigate("/settings", { state: { activeTab: "security" } })}
                 className="text-purple-600 hover:text-purple-700 font-medium"
               >
                 Change Password
