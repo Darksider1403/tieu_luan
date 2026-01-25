@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using EcommerceFashionWebsite.Services.Interface;
 using EcommerceFashionWebsite.DTOs;
 using Microsoft.AspNetCore.Authorization;
@@ -107,11 +107,48 @@ public class ProductController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<ProductDto>> CreateProduct([FromBody] CreateProductDto dto)
+    public async Task<ActionResult<ProductDto>> CreateProduct([FromForm] CreateProductDto dto)
     {
         try
         {
+            _logger.LogInformation("=== CREATE PRODUCT REQUEST ===");
+            _logger.LogInformation("Product ID: {Id}", dto.Id);
+            _logger.LogInformation("Product Name: {Name}", dto.Name);
+            _logger.LogInformation("Images count: {Count}", dto.Images?.Count ?? 0);
+            
+            if (dto.Images == null || dto.Images.Count == 0)
+            {
+                _logger.LogWarning("No images provided");
+                return BadRequest(new { error = "At least one product image is required" });
+            }
+
+            if (dto.Images.Count > 4)
+            {
+                return BadRequest(new { error = "Maximum 4 images allowed (0.jpg, 1.jpg, 2.jpg, 3.jpg)" });
+            }
+
+            // Validate images
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            const long maxFileSize = 5 * 1024 * 1024; // 5MB
+
+            foreach (var image in dto.Images)
+            {
+                _logger.LogInformation("Image: {FileName}, Size: {Size} bytes", image.FileName, image.Length);
+                
+                var extension = Path.GetExtension(image.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(extension))
+                {
+                    return BadRequest(new { error = $"Invalid file type: {extension}. Allowed types: {string.Join(", ", allowedExtensions)}" });
+                }
+
+                if (image.Length > maxFileSize)
+                {
+                    return BadRequest(new { error = $"File {image.FileName} exceeds maximum size of 5MB" });
+                }
+            }
+
             var product = await _productService.CreateProductAsync(dto);
+            _logger.LogInformation("Product created successfully: {ProductId}", product.Id);
             return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
         }
         catch (Exception ex)
@@ -122,10 +159,36 @@ public class ProductController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<ProductDto>> UpdateProduct(string id, [FromBody] UpdateProductDto dto)
+    public async Task<ActionResult<ProductDto>> UpdateProduct(string id, [FromForm] UpdateProductDto dto)
     {
         try
         {
+            // Validate images if provided
+            if (dto.Images != null && dto.Images.Count > 0)
+            {
+                if (dto.Images.Count > 4)
+                {
+                    return BadRequest(new { error = "Maximum 4 images allowed (0.jpg, 1.jpg, 2.jpg, 3.jpg)" });
+                }
+
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                const long maxFileSize = 5 * 1024 * 1024; // 5MB
+
+                foreach (var image in dto.Images)
+                {
+                    var extension = Path.GetExtension(image.FileName).ToLowerInvariant();
+                    if (!allowedExtensions.Contains(extension))
+                    {
+                        return BadRequest(new { error = $"Invalid file type: {extension}. Allowed types: {string.Join(", ", allowedExtensions)}" });
+                    }
+
+                    if (image.Length > maxFileSize)
+                    {
+                        return BadRequest(new { error = $"File {image.FileName} exceeds maximum size of 5MB" });
+                    }
+                }
+            }
+
             var product = await _productService.UpdateProductAsync(id, dto);
             return Ok(product);
         }

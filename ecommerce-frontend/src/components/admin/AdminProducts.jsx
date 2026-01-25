@@ -29,10 +29,15 @@ function AdminProducts() {
     name: "",
     price: "",
     quantity: "",
-    description: "",
+    material: "",
+    size: "",
+    color: "",
+    gender: "",
     idCategory: 1,
     status: 1,
   });
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
 
   useEffect(() => {
     fetchProducts();
@@ -140,14 +145,21 @@ function AdminProducts() {
 
   const handleEdit = (product) => {
     setEditingProduct(product);
+    // Parse description if it exists (format: "Material - Size - Color")
+    const descParts = product.description ? product.description.split(' - ') : [];
     setFormData({
       name: product.name || "",
       price: product.price || "",
       quantity: product.quantity || "",
-      description: product.description || "",
+      material: descParts[0] || product.material || "",
+      size: descParts[1] || product.size || "",
+      color: descParts[2] || product.color || "",
+      gender: product.gender || "",
       idCategory: product.idCategory || 1,
       status: product.status || 1,
     });
+    setSelectedImages([]);
+    setImagePreviews([]);
     setShowModal(true);
   };
 
@@ -157,37 +169,137 @@ function AdminProducts() {
       name: "",
       price: "",
       quantity: "",
-      description: "",
+      material: "",
+      size: "",
+      color: "",
+      gender: "",
       idCategory: 1,
       status: 1,
     });
+    setSelectedImages([]);
+    setImagePreviews([]);
     setShowModal(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Create FormData for multipart/form-data
+      const submitData = new FormData();
+      
       if (editingProduct) {
-        await productService.updateProduct(editingProduct.id, formData);
+        // Update product
+        submitData.append('Name', formData.name);
+        submitData.append('Price', formData.price);
+        submitData.append('Quantity', formData.quantity);
+        submitData.append('Material', formData.material || 'Cotton');
+        submitData.append('Size', formData.size || 'M');
+        submitData.append('Color', formData.color || 'Black');
+        submitData.append('Gender', formData.gender || 'Unisex');
+        submitData.append('IdCategory', formData.idCategory);
+        
+        // Add images if selected
+        if (selectedImages.length > 0) {
+          selectedImages.forEach(image => {
+            submitData.append('Images', image);
+          });
+          submitData.append('KeepExistingImages', 'false');
+        }
+        
+        await productService.updateProduct(editingProduct.id, submitData);
         setToast({
           message: "Product updated successfully",
           type: "success",
         });
       } else {
-        await productService.createProduct(formData);
+        // Create product
+        if (selectedImages.length === 0) {
+          setToast({
+            message: "Please select at least one image",
+            type: "error",
+          });
+          return;
+        }
+        
+        // Generate next product ID
+        const maxId = products.length > 0 ? Math.max(...products.map(p => parseInt(p.id))) : 0;
+        const newId = (maxId + 1).toString();
+        
+        submitData.append('Id', newId);
+        submitData.append('Name', formData.name);
+        submitData.append('Price', formData.price);
+        submitData.append('Quantity', formData.quantity);
+        submitData.append('Material', formData.material || 'Cotton');
+        submitData.append('Size', formData.size || 'M');
+        submitData.append('Color', formData.color || 'Black');
+        submitData.append('Gender', formData.gender || 'Unisex');
+        submitData.append('IdCategory', formData.idCategory);
+        
+        // Add images
+        selectedImages.forEach(image => {
+          submitData.append('Images', image);
+        });
+        
+        await productService.createProduct(submitData);
         setToast({
           message: "Product created successfully",
           type: "success",
         });
       }
       setShowModal(false);
+      setSelectedImages([]);
+      setImagePreviews([]);
       fetchProducts();
     } catch (error) {
+      console.error('Submit error:', error);
       setToast({
         message: error.response?.data?.error || "Operation failed",
         type: "error",
       });
     }
+  };
+
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    
+    // Limit to 4 images
+    if (files.length > 4) {
+      setToast({
+        message: "Maximum 4 images allowed",
+        type: "error",
+      });
+      return;
+    }
+    
+    // Validate file size (5MB max per file)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const invalidFiles = files.filter(file => file.size > maxSize);
+    
+    if (invalidFiles.length > 0) {
+      setToast({
+        message: "Some files exceed 5MB limit",
+        type: "error",
+      });
+      return;
+    }
+    
+    // Validate file types
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const invalidTypes = files.filter(file => !allowedTypes.includes(file.type));
+    
+    if (invalidTypes.length > 0) {
+      setToast({
+        message: "Only JPG, PNG, GIF, and WebP images are allowed",
+        type: "error",
+      });
+      return;
+    }
+    
+    setSelectedImages(files);
+    
+    // Generate previews
+    const previews = files.map(file => URL.createObjectURL(file));
+    setImagePreviews(previews);
   };
 
   const handleDelete = async (productId) => {
@@ -542,18 +654,122 @@ function AdminProducts() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Material
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.material}
+                    onChange={(e) =>
+                      setFormData({ ...formData, material: e.target.value })
+                    }
+                    placeholder="e.g., Cotton, Polyester"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Size
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.size}
+                    onChange={(e) =>
+                      setFormData({ ...formData, size: e.target.value })
+                    }
+                    placeholder="e.g., S, M, L, XL"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Color
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.color}
+                    onChange={(e) =>
+                      setFormData({ ...formData, color: e.target.value })
+                    }
+                    placeholder="e.g., Black, White, Red"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gender
+                  </label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) =>
+                      setFormData({ ...formData, gender: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Unisex">Unisex</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Image Upload Section */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Images
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Max 4 images, first image will be thumbnail)
+                  </span>
                 </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                    id="product-images"
+                    required={!editingProduct}
+                  />
+                  <label
+                    htmlFor="product-images"
+                    className="flex flex-col items-center justify-center cursor-pointer"
+                  >
+                    <ImageIcon className="w-12 h-12 text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-600">
+                      Click to upload images
+                    </span>
+                    <span className="text-xs text-gray-500 mt-1">
+                      JPG, PNG, GIF, WebP (max 5MB each)
+                    </span>
+                  </label>
+                </div>
+
+                {/* Image Previews */}
+                {imagePreviews.length > 0 && (
+                  <div className="mt-4 grid grid-cols-4 gap-4">
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Preview ${index}`}
+                          className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                        />
+                        <div className="absolute top-1 left-1 bg-purple-600 text-white text-xs px-2 py-1 rounded">
+                          {index === 0 ? "Thumbnail" : `${index}.jpg`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

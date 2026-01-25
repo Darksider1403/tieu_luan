@@ -26,6 +26,12 @@ apiClient.interceptors.request.use(
       console.warn('⚠️ No token in localStorage');
     }
     
+    // If data is FormData, remove Content-Type to let browser set it with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+      console.log('📎 FormData detected - letting browser set Content-Type');
+    }
+    
     return config;
   },
   (error) => {

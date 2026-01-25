@@ -28,6 +28,19 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Configure file upload size limits
+builder.Services.Configure<IISServerOptions>(options =>
+{
+    options.MaxRequestBodySize = 10 * 1024 * 1024; // 10MB
+});
+
+builder.Services.Configure<KestrelServerOptions>(options =>
+{
+    options.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10MB
+    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
+    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(2);
+});
+
 // Configure database connection
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrEmpty(connectionString))
@@ -128,11 +141,6 @@ builder.Services.AddHttpClient<IAIChatbotService, AIChatbotService>()
         client.Timeout = TimeSpan.FromSeconds(120); // 2 minutes
     });
 builder.Services.AddScoped<IAIChatbotService, AIChatbotService>();
-builder.Services.Configure<KestrelServerOptions>(options =>
-{
-    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
-    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(2);
-});
 
 builder.Services.AddHttpClient("AzureOpenAI")
     .AddPolicyHandler(retryPolicy)
@@ -149,6 +157,17 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("ReactApp"); 
+
+// Enable static files (for serving product images)
+app.UseStaticFiles();
+
+// Serve product folder as static files
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "product")),
+    RequestPath = "/product"
+});
 
 app.UseSession();
 app.UseAuthentication();

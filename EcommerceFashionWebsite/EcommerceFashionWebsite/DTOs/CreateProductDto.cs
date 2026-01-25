@@ -1,4 +1,4 @@
-﻿namespace EcommerceFashionWebsite.DTOs;
+namespace EcommerceFashionWebsite.DTOs;
 
 public class CreateProductDto
 {
@@ -11,4 +11,5 @@ public class CreateProductDto
     public string Color { get; set; } = string.Empty;
     public string Gender { get; set; } = string.Empty;
     public int IdCategory { get; set; }
+    public List<IFormFile>? Images { get; set; } // Max 4 images: 0.jpg (thumbnail), 1.jpg, 2.jpg, 3.jpg
 }

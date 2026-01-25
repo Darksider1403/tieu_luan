@@ -1,7 +1,8 @@
-﻿using EcommerceFashionWebsite.Entity;
+using EcommerceFashionWebsite.Entity;
 using EcommerceFashionWebsite.Repository;
 using EcommerceFashionWebsite.DTOs;
 using EcommerceFashionWebsite.Services.Interface;
+using Microsoft.AspNetCore.Http;
 
 namespace EcommerceFashionWebsite.Services
 {
@@ -164,6 +165,12 @@ namespace EcommerceFashionWebsite.Services
             var result = await _productRepository.CreateProductAsync(product);
             if (result > 0)
             {
+                // Save images if provided
+                if (dto.Images != null && dto.Images.Count > 0)
+                {
+                    await SaveProductImagesAsync(dto.Id, dto.Images);
+                }
+
                 return await MapToDtoAsync(product);
             }
 
@@ -186,6 +193,19 @@ namespace EcommerceFashionWebsite.Services
             product.IdCategory = dto.IdCategory;
 
             await _productRepository.UpdateProductAsync(product);
+
+            // Handle images if provided
+            if (dto.Images != null && dto.Images.Count > 0)
+            {
+                // If not keeping existing images, delete them first
+                if (!dto.KeepExistingImages)
+                {
+                    await DeleteProductImagesAsync(productId);
+                }
+
+                await SaveProductImagesAsync(productId, dto.Images);
+            }
+
             return await MapToDtoAsync(product);
         }
 
@@ -398,6 +418,84 @@ namespace EcommerceFashionWebsite.Services
                 ThumbnailImage = string.Empty,
                 AverageRating = 0.0 
             };
+        }
+
+        private async Task SaveProductImagesAsync(string productId, List<IFormFile> images)
+        {
+            try
+            {
+                _logger.LogInformation("=== SAVING PRODUCT IMAGES ===");
+                _logger.LogInformation("Product ID: {ProductId}", productId);
+                _logger.LogInformation("Number of images: {Count}", images.Count);
+                
+                // Create directory: product/{productId}/
+                var currentDir = Directory.GetCurrentDirectory();
+                _logger.LogInformation("Current directory: {CurrentDir}", currentDir);
+                
+                var uploadsFolder = Path.Combine(currentDir, "product", productId);
+                _logger.LogInformation("Upload folder path: {UploadFolder}", uploadsFolder);
+                
+                Directory.CreateDirectory(uploadsFolder);
+                _logger.LogInformation("Directory created successfully");
+
+                // Save up to 4 images as 0.jpg, 1.jpg, 2.jpg, 3.jpg
+                for (int i = 0; i < Math.Min(images.Count, 4); i++)
+                {
+                    var image = images[i];
+                    
+                    // Always save as .jpg regardless of original extension
+                    var fileName = $"{i}.jpg";
+                    var filePath = Path.Combine(uploadsFolder, fileName);
+                    
+                    _logger.LogInformation("Saving image {Index}: {FileName} -> {FilePath}", i, image.FileName, filePath);
+
+                    // Save file to disk
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await image.CopyToAsync(stream);
+                    }
+                    
+                    _logger.LogInformation("File saved to disk: {FilePath}", filePath);
+
+                    // Save to database with relative path (matching existing database format)
+                    var relativePath = $"/product/{productId}/{fileName}";
+                    var isThumbnail = (i == 0); // 0.jpg is always the thumbnail
+                    
+                    await _productRepository.InsertImageAsync(productId, relativePath, isThumbnail);
+                    
+                    _logger.LogInformation("Saved image for product {ProductId}: {FilePath} (Thumbnail: {IsThumbnail})", 
+                        productId, relativePath, isThumbnail);
+                }
+                
+                _logger.LogInformation("All images saved successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving product images for {ProductId}. Error: {Message}", productId, ex.Message);
+                throw;
+            }
+        }
+
+        private async Task DeleteProductImagesAsync(string productId)
+        {
+            try
+            {
+                // Delete from database
+                await _productRepository.DeleteProductImagesAsync(productId);
+
+                // Delete files from disk
+                var productFolder = Path.Combine(Directory.GetCurrentDirectory(), "product", productId);
+                if (Directory.Exists(productFolder))
+                {
+                    Directory.Delete(productFolder, true);
+                    _logger.LogInformation("Deleted product images folder for {ProductId}", productId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting product images for {ProductId}", productId);
+                throw;
+            }
         }
     }
 }
