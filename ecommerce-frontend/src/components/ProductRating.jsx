@@ -21,7 +21,7 @@ function ProductRating({ productId, onRatingUpdate }) {
       console.error("Error fetching rating info:", error);
       setMessage({
         type: "error",
-        text: "Failed to load ratings",
+        text: "Không thể tải đánh giá",
       });
     } finally {
       setLoading(false);
@@ -36,7 +36,7 @@ function ProductRating({ productId, onRatingUpdate }) {
     if (!ratingInfo?.canUserRate) {
       setMessage({
         type: "error",
-        text: "You must purchase this product before rating it",
+        text: "Bạn cần mua và nhận sản phẩm trước khi đánh giá",
       });
       setTimeout(() => setMessage(null), 3000);
       return;
@@ -54,8 +54,8 @@ function ProductRating({ productId, onRatingUpdate }) {
       setMessage({
         type: "success",
         text: ratingInfo.hasUserRated
-          ? "Rating updated successfully!"
-          : "Thank you for rating!",
+          ? "Đã cập nhật đánh giá thành công!"
+          : "Cảm ơn bạn đã đánh giá!",
       });
 
       // Refresh rating info
@@ -70,7 +70,7 @@ function ProductRating({ productId, onRatingUpdate }) {
     } catch (error) {
       setMessage({
         type: "error",
-        text: error.response?.data?.error || "Failed to submit rating",
+        text: error.response?.data?.error || "Không thể gửi đánh giá",
       });
       setTimeout(() => setMessage(null), 3000);
     } finally {
@@ -102,7 +102,7 @@ function ProductRating({ productId, onRatingUpdate }) {
               ? "cursor-pointer hover:scale-110 active:scale-95"
               : "cursor-default"
           } ${submitting ? "opacity-50" : ""}`}
-          aria-label={`Rate ${i} star${i > 1 ? "s" : ""}`}
+          aria-label={`Đánh giá ${i} sao`}
         >
           <Star
             className={`w-6 h-6 transition-colors ${
@@ -129,7 +129,7 @@ function ProductRating({ productId, onRatingUpdate }) {
     if (total === 0) {
       return (
         <div className="text-center py-4 text-gray-500">
-          No ratings yet. Be the first to rate!
+          Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!
         </div>
       );
     }
@@ -208,7 +208,7 @@ function ProductRating({ productId, onRatingUpdate }) {
 
       <div className="p-6">
         <h3 className="text-xl font-semibold text-gray-900 mb-6">
-          Customer Reviews & Ratings
+          Đánh giá & Nhận xét của khách hàng
         </h3>
 
         {/* Average Rating Display */}
@@ -223,7 +223,7 @@ function ProductRating({ productId, onRatingUpdate }) {
             </div>
             <div className="text-sm text-gray-500 mt-2">
               {ratingInfo?.totalRatings || 0}{" "}
-              {ratingInfo?.totalRatings === 1 ? "review" : "reviews"}
+              {ratingInfo?.totalRatings === 1 ? "đánh giá" : "đánh giá"}
             </div>
           </div>
 
@@ -234,7 +234,7 @@ function ProductRating({ productId, onRatingUpdate }) {
         {/* User Rating Section */}
         <div className="mt-6">
           <h4 className="text-lg font-medium text-gray-900 mb-3">
-            {ratingInfo?.hasUserRated ? "Your Rating" : "Rate this product"}
+            {ratingInfo?.hasUserRated ? "Đánh giá của bạn" : "Đánh giá sản phẩm này"}
           </h4>
 
           {ratingInfo?.canUserRate ? (
@@ -245,13 +245,13 @@ function ProductRating({ productId, onRatingUpdate }) {
                 </div>
                 {ratingInfo?.hasUserRated && (
                   <span className="text-sm text-gray-500 ml-2">
-                    (Click to change your rating)
+                    (Nhấn để thay đổi đánh giá của bạn)
                   </span>
                 )}
               </div>
               {hoveredStar > 0 && (
                 <p className="text-sm text-gray-600">
-                  Click to rate {hoveredStar} star{hoveredStar > 1 ? "s" : ""}
+                  Nhấn để đánh giá {hoveredStar} sao
                 </p>
               )}
             </div>
@@ -260,12 +260,11 @@ function ProductRating({ productId, onRatingUpdate }) {
               <ShoppingBag className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-amber-900">
-                  Purchase Required
+                  Cần mua hàng
                 </p>
                 <p className="text-sm text-amber-700 mt-1">
-                  You need to purchase and receive this product before you can
-                  rate it. This helps ensure authentic reviews from verified
-                  buyers.
+                  Bạn cần mua và nhận sản phẩm này trước khi có thể đánh giá.
+                  Điều này giúp đảm bảo các đánh giá đến từ người mua thực tế.
                 </p>
               </div>
             </div>
@@ -277,7 +276,7 @@ function ProductRating({ productId, onRatingUpdate }) {
           <div className="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-purple-900">
-                Your current rating:
+                Đánh giá hiện tại của bạn:
               </span>
               <div className="flex items-center gap-1">
                 {renderStars(false, ratingInfo.userRating)}

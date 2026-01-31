@@ -52,7 +52,6 @@ namespace EcommerceFashionWebsite.Controller
         {
             try
             {
-                // ✅ THÊM DEBUG LOGS
                 _logger.LogInformation("=== ADMIN CHAT REQUEST ===");
                 _logger.LogInformation("Request received at: {Time}", DateTime.Now);
                 _logger.LogInformation("Message: {Message}", request.Message);

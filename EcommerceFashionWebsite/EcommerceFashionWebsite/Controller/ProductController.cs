@@ -339,7 +339,6 @@ public class ProductController : ControllerBase
     }
     
     [HttpGet("{id}/rating")]
-    [Authorize]
     public async Task<ActionResult<ProductRatingInfoDto>> GetProductRating(string id)
     {
         try

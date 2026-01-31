@@ -36,6 +36,20 @@ function ProductDetail() {
         setError(null);
 
         const data = await productService.getProduct(id);
+        console.log("📦 Product Data from API:", data);
+        console.log("Material:", data.Material, "Size:", data.Size, "Color:", data.Color);
+        
+        // Parse description if material/size/color are empty
+        if (data.description && (!data.material || !data.size || !data.color)) {
+          const parts = data.description.split(' - ').map(p => p.trim());
+          if (parts.length >= 3) {
+            data.material = data.material || parts[0];
+            data.size = data.size || parts[1];
+            data.color = data.color || parts[2];
+            console.log("✅ Parsed from description:", { material: data.material, size: data.size, color: data.color });
+          }
+        }
+        
         setProduct(data);
 
         const imagesData = await productService.getProductImages(id);
@@ -213,26 +227,83 @@ function ProductDetail() {
           Quay lại
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-white border rounded-lg p-8">
-            <div className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-lg p-4">
+            <div className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-lg p-4 mb-6">
               <ProductImageGallery images={images} productName={product.name} />
+            </div>
+
+            {/* Product Information Card */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-gray-900 border-b pb-3">
+                Thông tin sản phẩm
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <span className="text-blue-600 font-bold text-lg flex-shrink-0">
+                    📦
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">Chất liệu</p>
+                    <p className="text-sm text-gray-600">{product.Material || product.material || "Chưa cập nhật"}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <span className="text-blue-600 font-bold text-lg flex-shrink-0">
+                    📏
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">Kích thước</p>
+                    <p className="text-sm text-gray-600">{product.Size || product.size || "Chưa cập nhật"}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <span className="text-blue-600 font-bold text-lg flex-shrink-0">
+                    🎨
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">Màu sắc</p>
+                    <p className="text-sm text-gray-600">{product.Color || product.color || "Chưa cập nhật"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <span className="text-blue-600 font-bold text-lg flex-shrink-0">
+                    📊
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">Danh mục</p>
+                    <p className="text-sm text-gray-600">
+                      {product.CategoryName || product.categoryName || "Thời trang"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <span className="text-blue-600 font-bold text-lg flex-shrink-0">
+                    🏷️
+                  </span>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">Mã sản phẩm</p>
+                    <p className="text-sm text-gray-600 font-mono">{product.Id || product.id}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="bg-white border rounded-lg p-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            <h1 className="text-3xl font-bold text-gray-900 mb-6">
               {product.name}
             </h1>
 
-            <div className="mt-8">
-              <ProductRating
-                productId={id}
-                onRatingSubmit={handleRatingUpdate}
-              />
-            </div>
+            <p className="text-4xl font-bold text-blue-600 mb-4">
+              {product.price?.toLocaleString("vi-VN")}đ
+            </p>
 
-            <p className="text-gray-700 mb-4">
+            <p className="text-gray-700 mb-8">
               Tình trạng:{" "}
               <span
                 className={`font-semibold ${
@@ -244,29 +315,6 @@ function ProductDetail() {
                   : "Hết hàng"}
               </span>
             </p>
-
-            <p className="text-4xl font-bold text-blue-600 mb-8">
-              {product.price?.toLocaleString("vi-VN")}đ
-            </p>
-
-            <div className="mb-8 pb-8 border-b">
-              <p className="font-semibold text-gray-900 mb-4">
-                Mô tả sản phẩm:
-              </p>
-              <div className="text-gray-700 space-y-2">
-                <p>
-                  <span className="font-medium">Chất liệu:</span>{" "}
-                  {product.material}
-                </p>
-                <p>
-                  <span className="font-medium">Kích thước:</span>{" "}
-                  {product.size}
-                </p>
-                <p>
-                  <span className="font-medium">Màu sắc:</span> {product.color}
-                </p>
-              </div>
-            </div>
 
             {/* Quantity Selector */}
             <div className="space-y-2 mb-6">
@@ -373,6 +421,14 @@ function ProductDetail() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Product Rating Section - Full Width */}
+        <div className="mb-8">
+          <ProductRating
+            productId={id}
+            onRatingSubmit={handleRatingUpdate}
+          />
         </div>
 
         {/* Comments Section */}

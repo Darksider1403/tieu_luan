@@ -291,12 +291,31 @@ namespace EcommerceFashionWebsite.Services
                 var averageRating = await _productRepository.GetProductAverageRatingAsync(productId);
                 var totalRatings = await _productRepository.GetProductTotalRatingsAsync(productId);
 
+                // Parse material, size, color from database or description if needed
+                string material = product.Material;
+                string size = product.Size;
+                string color = product.Color;
+                
+                // If Material/Size/Color are empty but we have them in a format like "Cotton - S - Trắng"
+                // Try to parse from the pattern if they're stored that way
+                if (string.IsNullOrWhiteSpace(material) && 
+                    string.IsNullOrWhiteSpace(size) && 
+                    string.IsNullOrWhiteSpace(color))
+                {
+                    // Check if there's a description pattern we can parse
+                    // This is a fallback for legacy data
+                    _logger.LogWarning("Product {ProductId} missing material/size/color fields", productId);
+                }
+
                 return new ProductDto
                 {
                     Id = product.Id,
                     Name = product.Name,
                     Price = product.Price,
-                    Description = $"{product.Material} - {product.Size} - {product.Color}",
+                    Description = $"{material} - {size} - {color}",
+                    Material = material,
+                    Size = size,
+                    Color = color,
                     Quantity = product.Quantity,
                     Status = product.Status,
                     CategoryId = product.IdCategory,

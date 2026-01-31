@@ -298,7 +298,6 @@ Doanh thu tháng này đạt 45.2M đ, tăng 18% so với tháng trước, vư�
                         var revenue = await GetRevenueDataAsync();
                         context.Add($"📊 **Doanh thu & Tài chính:**\n{revenue}");
 
-                        // Add profit margin analysis if asking about profit
                         if (ContainsAny(lowerMessage, "lợi nhuận", "profit", "margin"))
                         {
                             var profitAnalysis = await GetProfitAnalysisAsync();
@@ -312,7 +311,6 @@ Doanh thu tháng này đạt 45.2M đ, tăng 18% so với tháng trước, vư�
                         var inventory = await GetInventoryDataAsync();
                         context.Add($"📦 **Tồn kho:**\n{inventory}");
 
-                        // Add turnover analysis
                         if (ContainsAny(lowerMessage, "luân chuyển", "turnover", "ế", "chậm bán"))
                         {
                             var turnover = await GetInventoryTurnoverAsync();
@@ -324,11 +322,11 @@ Doanh thu tháng này đạt 45.2M đ, tăng 18% so với tháng trước, vư�
                     if (ContainsAny(lowerMessage, "đơn hàng", "order", "đơn", "giao hàng", "vận chuyển"))
                     {
                         _logger.LogInformation("🔍 ADMIN ORDER QUERY detected in message: {Message}", lowerMessage);
-                        
+
                         // Check if asking about specific user's orders
                         var username = ExtractUsername(lowerMessage);
                         _logger.LogInformation("📝 Extracted username: '{Username}'", username ?? "[NONE]");
-                        
+
                         if (!string.IsNullOrEmpty(username))
                         {
                             _logger.LogInformation("✅ Fetching orders for username: {Username}", username);
@@ -400,59 +398,30 @@ Doanh thu tháng này đạt 45.2M đ, tăng 18% so với tháng trước, vư�
 
                     // PRODUCT SEARCH
                     bool wantsToSeeProducts = ContainsAny(lowerMessage,
-                        // Viewing actions
-                        "xem", "show", "hiển thị", "cho tôi xem", 
-    
-                        // Search actions
+                        "xem", "show", "hiển thị", "cho tôi xem",
                         "tìm", "search", "có", "bán",
-    
-                        // Product keywords
                         "sản phẩm", "product", "mới", "new", "latest",
-    
-                        // Product categories
                         "áo", "quần", "váy", "đầm", "giày", "túi", "phụ kiện", "dép",
-    
-                        // Styling & advice keywords 
                         "tư vấn", "advice", "gợi ý", "suggest", "recommend",
                         "phối đồ", "outfit", "kết hợp", "mix", "match",
-    
-                        // Event/occasion keywords 
                         "dự tiệc", "party", "sự kiện", "event", "đi chơi", "dạo phố",
                         "đi làm", "công sở", "office", "du lịch", "travel",
                         "cưới", "wedding", "sinh nhật", "birthday",
-    
-                        // General question words
                         "gì", "what", "nào", "which"
                     );
 
-                    _logger.LogInformation("🔍 Product detection - wantsToSeeProducts: {Wants}", wantsToSeeProducts);
-
                     if (wantsToSeeProducts)
                     {
-                        _logger.LogInformation("✅ Product query detected: {Message}", userMessage);
-
-                        // Extract smart keywords (returns empty string for "newest products")
                         var searchQuery = ExtractSearchKeywords(lowerMessage);
-
-                        _logger.LogInformation("📝 Extracted keywords: '{Keywords}'",
-                            string.IsNullOrEmpty(searchQuery) ? "[EMPTY - NEWEST PRODUCTS]" : searchQuery);
-
-                        // Search for products
                         var products = await SearchProductsForContextAsync(searchQuery);
-
-                        _logger.LogInformation("📦 SearchProductsForContextAsync returned {Count} formatted strings",
-                            products?.Count ?? 0);
-
                         if (products.Any())
                         {
-                            _logger.LogInformation("✅ Adding {Count} products to context", products.Count);
                             context.Add(
                                 $"🛍️ **Sản phẩm có sẵn (Tìm thấy {products.Count}):**\n{string.Join("\n", products)}");
                             context.Add("⚠️ **CHỈ giới thiệu các sản phẩm trên. KHÔNG tự bịa thêm sản phẩm khác.**");
                         }
                         else
                         {
-                            _logger.LogWarning("❌ No products returned - adding 'not found' message to context");
                             context.Add(
                                 "⚠️ **KHÔNG TÌM THẤY SẢN PHẨM PHÙ HỢP TRONG KHO.** Hãy xin lỗi khách hàng và hướng dẫn họ mô tả chi tiết hơn hoặc liên hệ hotline.");
                         }
@@ -1133,109 +1102,124 @@ Doanh thu tháng này đạt 45.2M đ, tăng 18% so với tháng trước, vư�
             return matched.Any();
         }
 
-       private string ExtractSearchKeywords(string message)
-{
-    _logger.LogInformation("🔑 ExtractSearchKeywords input: '{Message}'", message);
-
-    // Special case: newest/latest products request
-    if (ContainsAny(message, "mới nhất", "newest", "latest", "sản phẩm mới", "new products", "hàng mới",
-            "có gì", "gì mới"))
-    {
-        _logger.LogInformation("✅ Detected 'newest products' request - returning empty string");
-        return "";
-    }
-
-    var keywords = new List<string>();
-
-    // ✅ NEW: Event/Occasion detection
-    var occasions = new Dictionary<string, string[]>
-    {
-        { "dự tiệc", new[] { "dự tiệc", "tiệc", "party", "gala" } },
-        { "công sở", new[] { "công sở", "đi làm", "office", "work" } },
-        { "dạo phố", new[] { "dạo phố", "đi chơi", "casual", "hang out" } },
-        { "du lịch", new[] { "du lịch", "travel", "vacation" } },
-        { "cưới", new[] { "cưới", "wedding", "đám cưới" } },
-        { "thể thao", new[] { "thể thao", "gym", "sport", "workout" } }
-    };
-
-    // Check for occasions first
-    foreach (var occasion in occasions)
-    {
-        if (occasion.Value.Any(keyword => message.Contains(keyword)))
+        private string ExtractSearchKeywords(string message)
         {
-            // For party/formal events -> suggest váy, đầm, áo sơ mi
-            if (occasion.Key == "dự tiệc" || occasion.Key == "cưới")
+            _logger.LogInformation("🔑 ExtractSearchKeywords input: '{Message}'", message);
+
+            // Special case: newest/latest products request
+            if (ContainsAny(message, "mới nhất", "newest", "latest", "sản phẩm mới", "new products", "hàng mới",
+                    "có gì", "gì mới"))
             {
-                keywords.Add("váy");
-                keywords.Add("đầm");
-                _logger.LogInformation("  Detected formal occasion: {Occasion} -> adding formal wear", occasion.Key);
+                _logger.LogInformation("✅ Detected 'newest products' request - returning empty string");
+                return "";
             }
-            // For office -> suggest áo sơ mi, quần tây
-            else if (occasion.Key == "công sở")
+
+            var keywords = new List<string>();
+
+            // ✅ PRIORITY 1: Check for specific product names or detailed descriptions
+            // Example: "áo sweater cổ tròn" should search for "sweater cổ tròn"
+            var specificTerms = new[]
             {
-                keywords.Add("áo sơ mi");
-                keywords.Add("quần tây");
-                _logger.LogInformation("  Detected office occasion -> adding office wear");
-            }
-            break;
-        }
-    }
-
-    // Product types
-    var productTypes = new Dictionary<string, string[]>
-    {
-        { "áo", new[] { "áo sơ mi", "áo thun", "áo polo", "áo", "shirt", "ao" } },
-        { "quần", new[] { "quần jean", "quần tây", "quần", "pants", "quan" } },
-        { "váy", new[] { "váy", "dress", "vay" } },
-        { "đầm", new[] { "đầm", "dress", "dam" } },
-        { "giày", new[] { "giày", "shoes", "giay" } },
-        { "dép", new[] { "dép", "sandals", "dep" } },
-        { "túi", new[] { "túi", "bag", "tui" } },
-        { "phụ kiện", new[] { "phụ kiện", "accessory", "phu kien" } }
-    };
-
-    // Check for product types (only if not already added by occasion)
-    if (!keywords.Any())
-    {
-        foreach (var type in productTypes)
-        {
-            if (type.Value.Any(keyword => message.Contains(keyword)))
+                "sweater", "len", "cardigan", "hoodie", "blazer", "khoác",
+                "cổ tròn", "cổ lọ", "cổ v", "ba lỗ",
+                "jeans", "jean", "kaki", "tây",
+                "maxi", "midi", "mini"
+            };
+            
+            foreach (var term in specificTerms)
             {
-                keywords.Add(type.Key);
-                _logger.LogInformation("  Found product type: {Type}", type.Key);
-                break;
+                if (message.Contains(term))
+                {
+                    keywords.Add(term);
+                    _logger.LogInformation("  Found specific term: {Term}", term);
+                }
             }
+
+            // ✅ PRIORITY 2: Event/Occasion detection (only if no specific terms found)
+            if (!keywords.Any())
+            {
+                var occasions = new Dictionary<string, string[]>
+                {
+                    { "dự tiệc", new[] { "dự tiệc", "tiệc", "party", "gala" } },
+                    { "công sở", new[] { "công sở", "đi làm", "office", "work" } },
+                    { "dạo phố", new[] { "dạo phố", "đi chơi", "casual", "hang out" } },
+                    { "du lịch", new[] { "du lịch", "travel", "vacation" } },
+                    { "cưới", new[] { "cưới", "wedding", "đám cưới" } },
+                    { "thể thao", new[] { "thể thao", "gym", "sport", "workout" } }
+                };
+
+                // Check for occasions
+                foreach (var occasion in occasions)
+                {
+                    if (occasion.Value.Any(keyword => message.Contains(keyword)))
+                    {
+                        // For party/formal events -> suggest váy, đầm
+                        if (occasion.Key == "dự tiệc" || occasion.Key == "cưới")
+                        {
+                            keywords.Add("váy");
+                            keywords.Add("đầm");
+                            _logger.LogInformation("  Detected formal occasion: {Occasion} -> adding formal wear",
+                                occasion.Key);
+                        }
+                        // For office -> suggest áo sơ mi, quần tây
+                        else if (occasion.Key == "công sở")
+                        {
+                            keywords.Add("áo sơ mi");
+                            keywords.Add("quần tây");
+                            _logger.LogInformation("  Detected office occasion -> adding office wear");
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            // ✅ PRIORITY 3: Product types (only if still no keywords)
+            if (!keywords.Any())
+            {
+                var productTypes = new Dictionary<string, string[]>
+                {
+                    { "áo", new[] { "áo sơ mi", "áo thun", "áo polo", "áo sweater", "áo len", "áo khoác", "áo", "shirt", "ao" } },
+                    { "quần", new[] { "quần jean", "quần tây", "quần", "pants", "quan" } },
+                    { "váy", new[] { "váy", "dress", "vay" } },
+                    { "đầm", new[] { "đầm", "dress", "dam" } },
+                    { "giày", new[] { "giày", "shoes", "giay" } },
+                    { "dép", new[] { "dép", "sandals", "dep" } },
+                    { "túi", new[] { "túi", "bag", "tui" } },
+                    { "phụ kiện", new[] { "phụ kiện", "accessory", "phu kien" } }
+                };
+
+                foreach (var type in productTypes)
+                {
+                    if (type.Value.Any(keyword => message.Contains(keyword)))
+                    {
+                        keywords.Add(type.Key);
+                        _logger.LogInformation("  Found product type: {Type}", type.Key);
+                        break;
+                    }
+                }
+            }
+
+            // ✅ Always add colors if mentioned
+            var colors = new[]
+                { "đỏ", "red", "xanh", "blue", "vàng", "yellow", "đen", "black", "trắng", "white", "hồng", "pink" };
+            foreach (var color in colors)
+            {
+                if (message.Contains(color))
+                {
+                    keywords.Add(color);
+                    _logger.LogInformation("  Found color: {Color}", color);
+                    break;
+                }
+            }
+
+            var result = keywords.Any() ? string.Join(" ", keywords.Distinct()) : "";
+
+            _logger.LogInformation("🔑 ExtractSearchKeywords output: '{Result}'",
+                string.IsNullOrEmpty(result) ? "[EMPTY]" : result);
+
+            return result;
         }
-    }
-
-    // Colors
-    var colors = new[]
-        { "đỏ", "red", "xanh", "blue", "vàng", "yellow", "đen", "black", "trắng", "white", "hồng", "pink" };
-    foreach (var color in colors)
-    {
-        if (message.Contains(color))
-        {
-            keywords.Add(color);
-            _logger.LogInformation("  Found color: {Color}", color);
-            break;
-        }
-    }
-
-    // Styles
-    var styles = new[] { "sơ mi", "polo", "thun", "khoác", "jacket", "jean", "tây", "sang trọng", "lịch sự", "thanh lịch" };
-    foreach (var style in styles.Where(s => message.Contains(s)))
-    {
-        keywords.Add(style);
-        _logger.LogInformation("  Found style: {Style}", style);
-    }
-
-    var result = keywords.Any() ? string.Join(" ", keywords.Distinct()) : "";
-
-    _logger.LogInformation("🔑 ExtractSearchKeywords output: '{Result}'",
-        string.IsNullOrEmpty(result) ? "[EMPTY]" : result);
-
-    return result;
-}
 
         public async Task<string> DiagnosticProductCheck()
         {
@@ -1271,23 +1255,23 @@ First 5 products:";
             try
             {
                 _logger.LogInformation("🔍 ExtractUsername - Input message: '{Message}'", message);
-                
+
                 // Patterns to extract username - using flexible patterns to handle encoding issues
                 var patterns = new[]
                 {
-                    @"t[àá].{0,3}\s*kho[aả].{0,3}n\s+[""']?(\w+)[""']?",  // tài khoản (flexible for encoding)
+                    @"t[àá].{0,3}\s*kho[aả].{0,3}n\s+[""']?(\w+)[""']?", // tài khoản (flexible for encoding)
                     @"user\s+[""']?(\w+)[""']?",
                     @"username\s+[""']?(\w+)[""']?",
-                    @"c[ủu].{0,3}a\s+[""']?(\w+)[""']?",  // của
-                    @"kh[áà].{0,3}ch\s+h[àá]ng\s+[""']?(\w+)[""']?",  // khách hàng
-                    @"don\s+h[àá]ng\s+c[ủu].{0,3}a\s+[""']?(\w+)[""']?",  // đơn hàng của
-                    @"(\w+)\s+c[óo].{0,3}\s+nh.{0,3}ng\s+don",  // X có những đơn
+                    @"c[ủu].{0,3}a\s+[""']?(\w+)[""']?", // của
+                    @"kh[áà].{0,3}ch\s+h[àá]ng\s+[""']?(\w+)[""']?", // khách hàng
+                    @"don\s+h[àá]ng\s+c[ủu].{0,3}a\s+[""']?(\w+)[""']?", // đơn hàng của
+                    @"(\w+)\s+c[óo].{0,3}\s+nh.{0,3}ng\s+don", // X có những đơn
                 };
 
                 foreach (var pattern in patterns)
                 {
                     _logger.LogInformation("  Testing pattern: {Pattern}", pattern);
-                    var match = System.Text.RegularExpressions.Regex.Match(message, pattern, 
+                    var match = System.Text.RegularExpressions.Regex.Match(message, pattern,
                         System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                     if (match.Success && match.Groups.Count > 1)
                     {
@@ -1324,7 +1308,7 @@ First 5 products:";
                 var orders = await _context.Orders
                     .Where(o => o.IdAccount == account.Id)
                     .Include(o => o.OrderDetail)
-                        .ThenInclude(od => od.Product)
+                    .ThenInclude(od => od.Product)
                     .OrderByDescending(o => o.DateBuy)
                     .Take(10) // Limit to last 10 orders
                     .ToListAsync();
@@ -1405,11 +1389,10 @@ First 5 products:";
                 return $"⚠️ Có lỗi xảy ra khi lấy thông tin đơn hàng của '{username}': {ex.Message}";
             }
         }
-        
+
         private static readonly MemoryCache _responseCache = new MemoryCache(new MemoryCacheOptions
         {
-            SizeLimit = 1000 
+            SizeLimit = 1000
         });
     }
-    
 }
